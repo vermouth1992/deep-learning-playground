@@ -123,8 +123,9 @@ class Solver(object):
 
             elapse = time.time() - start
 
-            print 'Epoch: %d - loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - elapse: %.4fs' % \
-                  (step, avg_loss, training_accuracy, avg_val_loss, val_accuracy, elapse)
+            print 'Epoch: %d/%d - elapse: %.4fs' % (step, self.num_epochs, elapse)
+            print 'loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - ' % \
+                  (avg_loss, training_accuracy, avg_val_loss, val_accuracy)
 
         if writer is not None:
             writer.flush()
