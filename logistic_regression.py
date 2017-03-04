@@ -10,8 +10,10 @@ import numpy as np
 
 class LogisticRegression(MachineLearningModel):
     def __init__(self, dtype, input_shape, reg):
-        super(LogisticRegression, self).__init__(dtype, input_shape)
+        super(LogisticRegression, self).__init__(dtype)
         dimension, num_classes = input_shape
+        self.X = tf.placeholder(dtype=self.dtype, shape=[None, dimension], name='X')
+        self.Y = tf.placeholder(dtype=self.dtype, shape=[None, num_classes], name='Y')
         self.W = tf.Variable(tf.random_normal(input_shape), dtype=self.dtype, name='weights')  # Dx1 matrix
         self.b = tf.Variable(tf.zeros([1, num_classes]), dtype=self.dtype, name='bias')
         self.reg = reg

@@ -1,22 +1,18 @@
-
 import tensorflow as tf
+
 
 class MachineLearningModel(object):
     """
     An abstract class defines API for subclasses and solver
     """
-    def __init__(self, dtype, input_shape):
+
+    def __init__(self, dtype):
         """
 
         :param dtype: data type used to initialize placeholder
         :param kwargs: how to init the trainable variables, varies in different models
         """
         self.dtype = dtype
-        if type(input_shape) is not list:
-            raise TypeError('input_shape must be a list')
-        dimension, num_classes = input_shape
-        self.X = tf.placeholder(dtype=self.dtype, shape=[None, dimension], name='X')
-        self.Y = tf.placeholder(dtype=self.dtype, shape=[None, num_classes], name='Y')
 
     def inference(self, X):
         """

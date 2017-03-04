@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+
 class Solver(object):
     """
     A generic solver for any classification problem
@@ -22,12 +23,18 @@ class Solver(object):
         self.num_epochs = kwargs.pop('num_epochs', 10)  # default is 10 epochs
         self.batch_size = kwargs.pop('batch_size', 1)  # default is 1 sample per mini-batch
         self.optimizer = kwargs.pop('optimizer', 'sgd')  # default is sgd
-        self.optimizer_config = kwargs.pop('optimizer_config', {'learning_rate': 0.01})
+        self.optimizer_config = kwargs.pop('optimizer_config', {'learning_rate': 0.01, 'decay_rate': 1.0})
+        self.learning_rate = tf.Variable(initial_value=self.optimizer_config['learning_rate'], trainable=False)
+        if 'decay_rate' in self.optimizer_config:
+            self.decay_rate = tf.constant(self.optimizer_config['decay_rate'], dtype=dtype)
+        else:
+            self.decay_rate = tf.constant(1.0, dtype=dtype)
         self.export_summary = kwargs.pop('export_summary', False)
         self.summary_config = kwargs.pop('summary_config', None)
 
     def build_computation_graph(self):
         with self.graph.as_default():
+            tf.set_random_seed(1337)    # for reproduction
             with tf.name_scope('steps'):
                 global_step = tf.Variable(initial_value=0, dtype=tf.int32, trainable=False, name='global_step')
                 increment_step = global_step.assign_add(1)
@@ -37,25 +44,24 @@ class Solver(object):
                 loss = self.model.loss(X, Y)
                 check_accuracy = self.model.check_accuracy(X, Y)
             with tf.name_scope('optimizer'):
-                learning_rate = self.optimizer_config['learning_rate']
                 optimizer = None
                 if self.optimizer == 'adam':
                     beta1 = self.optimizer_config.get('beta1', 0.9)
                     beta2 = self.optimizer_config.get('beta2', 0.999)
                     epsilon = self.optimizer_config.get('epsilon', 1e-8)
-                    optimizer = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon)
+                    optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1, beta2, epsilon)
                 elif self.optimizer == 'sgd':
-                    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+                    optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
                 elif self.optimizer == 'momentum':
                     momentum = self.optimizer_config.get('momentum', 0.9)
-                    use_nesterov = self.optimizer_config.get('use_nesterov', False)
-                    optimizer = tf.train.MomentumOptimizer(learning_rate, momentum, use_nesterov=use_nesterov)
+                    use_nesterov = self.optimizer_config.get('use_nesterov', True)
+                    optimizer = tf.train.MomentumOptimizer(self.learning_rate, momentum, use_nesterov=use_nesterov)
                 elif self.optimizer == 'rmsprop':
                     decay = self.optimizer_config.get('decay', 0.9)
                     momentum = self.optimizer_config.get('momentum', 0.0)
                     epsilon = self.optimizer_config.get('epsilon', 1e-10)
                     centered = self.optimizer_config.get('centered', False)
-                    optimizer == tf.train.RMSPropOptimizer(learning_rate, decay=decay, momentum=momentum,
+                    optimizer == tf.train.RMSPropOptimizer(self.learning_rate, decay=decay, momentum=momentum,
                                                            epsilon=epsilon, centered=centered)
                 else:
                     raise ValueError('Unknown optimizer')
@@ -102,6 +108,7 @@ class Solver(object):
                     _, l = self.sess.run([optimizer, loss], feed_dict=feed_dict)
 
                 total_loss += l
+            self.learning_rate.assign(tf.multiply(self.learning_rate, self.decay_rate))
             # check training accuracy
             training_accuracy = self.sess.run(check_accuracy, feed_dict={self.model.X: self.X_train,
                                                                          self.model.Y: self.y_train})

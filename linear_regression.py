@@ -8,7 +8,9 @@ import tensorflow as tf
 
 class LinearRegression(MachineLearningModel):
     def __init__(self, dtype, input_shape):
-        MachineLearningModel.__init__(self, dtype=dtype, input_shape=input_shape)
+        MachineLearningModel.__init__(self, dtype=dtype)
+        self.X = tf.placeholder(dtype=self.dtype, shape=[None, input_shape], name='X')
+        self.Y = tf.placeholder(dtype=self.dtype, shape=[None], name='Y')
         self.W = tf.Variable(tf.zeros(input_shape), dtype=self.dtype, name='weights')  # Dx1 matrix
         self.b = tf.Variable(0.0, dtype=self.dtype, name='bias')
 
