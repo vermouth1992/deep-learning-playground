@@ -15,7 +15,7 @@ class FullyConnectedNet(MachineLearningModel):
     """
 
     def __init__(self, dtype, input_shape, hidden_shape, num_classes, weight_scale=1e-2, reg=0.0, use_batch_norm=False,
-                 dropout=0):
+                 keep_prob=0.5):
         """
 
         :param dtype: data type
@@ -27,10 +27,14 @@ class FullyConnectedNet(MachineLearningModel):
         super(FullyConnectedNet, self).__init__(dtype)
         self.X = tf.placeholder(dtype=dtype, shape=[None, input_shape])
         self.Y = tf.placeholder(dtype=dtype, shape=[None, num_classes])
-        self.keep_prob = tf.Variable(initial_value=1.0, dtype=dtype)
         self.reg = reg
         self.use_batch_norm = use_batch_norm
-        self.use_dropout = use_dropout
+
+        if keep_prob > 1.0 or keep_prob <= 0.0:
+            self.use_dropout = False
+        else:
+            self.use_dropout = True
+        self.keep_prob = tf.Variable(initial_value=tf.cast(keep_prob, dtype=dtype), dtype=dtype, trainable=False)
 
         self.is_training = False
 
@@ -48,6 +52,9 @@ class FullyConnectedNet(MachineLearningModel):
             self.bias[bias_name] = tf.Variable(initial_value=tf.zeros(shape=bias_shape), dtype=self.dtype,
                                                name=bias_name)
 
+        if self.use_batch_norm:
+            self.bn_param = [{} for _ in range(self.num_layers - 1)]
+
     def inference(self, X):
         output = X
         for i in range(1, self.num_layers):
@@ -55,7 +62,7 @@ class FullyConnectedNet(MachineLearningModel):
             bias_name = 'b' + str(i)
             output = affine(output, self.weights[weight_name], self.bias[bias_name])
             if self.use_batch_norm:
-                output = batch_norm(output, is_training=self.is_training)
+                output = batch_norm(output, is_training=self.is_training, bn_param=self.bn_param[i - 1])
             output = relu(output)
             if self.use_dropout and self.is_training:
                 output = dropout(output, self.keep_prob)
@@ -116,10 +123,13 @@ if __name__ == '__main__':
 
     graph = tf.Graph()
     with tf.Session(graph=graph) as sess:
-        model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100, 100, 100], num_classes=10,
-                                  weight_scale=1e-2, reg=1e-5, use_batch_norm=True, use_dropout=False)
+        model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100, 100, 100],
+                                  num_classes=10,
+                                  weight_scale=1e-2, reg=1e-7, use_batch_norm=True, keep_prob=-1)
         solver = Solver(model, training_data, dtype=np.float32, graph=graph, sess=sess,
-                        optimizer='momentum', optimizer_config={'learning_rate': 1e-3, 'decay_rate': 0.95},
-                        batch_size=128, num_epochs=20, export_summary=False)
+                        optimizer='momentum', optimizer_config={'learning_rate': 1e-1, 'decay_rate': 0.95},
+                        batch_size=128, num_epochs=10, export_summary=False)
         solver.train()
-        # accuracy = sess.run(model.check_accuracy(X_test, y_test))
+        accuracy = sess.run(model.check_accuracy(X_test, y_test))
+
+        print 'Testing Accuracy: %.4f' % accuracy

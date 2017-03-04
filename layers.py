@@ -14,11 +14,27 @@ def relu(X):
     return tf.nn.relu(X)
 
 
-def batch_norm(X, is_training, momentum=0.9, epsilon=1e-5):
-    scale = tf.Variable(tf.ones([X.get_shape()[-1]]))
-    beta = tf.Variable(tf.zeros([X.get_shape()[-1]]))
-    pop_mean = tf.Variable(tf.zeros([X.get_shape()[-1]]), trainable=False)
-    pop_var = tf.Variable(tf.ones([X.get_shape()[-1]]), trainable=False)
+def batch_norm(X, is_training, bn_param, momentum=0.9, epsilon=1e-5):
+    if 'scale' in bn_param:
+        scale = bn_param['scale']
+    else:
+        scale = tf.Variable(tf.ones([X.get_shape()[-1]]))
+        bn_param['scale'] = scale
+    if 'beta' in bn_param:
+        beta = bn_param['beta']
+    else:
+        beta = tf.Variable(tf.zeros([X.get_shape()[-1]]))
+        bn_param['beta'] = beta
+    if 'pop_mean' in bn_param:
+        pop_mean = bn_param['pop_mean']
+    else:
+        pop_mean = tf.Variable(tf.zeros([X.get_shape()[-1]]), trainable=False)
+        bn_param['pop_mean'] = pop_mean
+    if 'pop_var' in bn_param:
+        pop_var = bn_param['pop_var']
+    else:
+        pop_var = tf.Variable(tf.ones([X.get_shape()[-1]]), trainable=False)
+        bn_param['pop_var'] = pop_var
 
     if is_training:
         batch_mean, batch_var = tf.nn.moments(X, [0])

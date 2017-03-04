@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-
+import time
 
 class Solver(object):
     """
@@ -92,6 +92,9 @@ class Solver(object):
 
         # main training loop
         for epoch in xrange(self.num_epochs):
+
+            start = time.time()
+
             arr = np.arange(self.num_training_samples)
             np.random.shuffle(arr)
             batch_mask_list = np.array_split(arr, self.num_training_samples / self.batch_size)
@@ -117,8 +120,11 @@ class Solver(object):
             val_loss, val_accuracy = self.sess.run([loss, check_accuracy],
                                                    feed_dict={self.model.X: self.X_val, self.model.Y: self.y_val})
             avg_val_loss = val_loss / self.num_val_samples
-            print 'Epoch: %d - loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f' % \
-                  (step, avg_loss, training_accuracy, avg_val_loss, val_accuracy)
+
+            elapse = time.time() - start
+
+            print 'Epoch: %d - loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - elapse: %.4fs' % \
+                  (step, avg_loss, training_accuracy, avg_val_loss, val_accuracy, elapse)
 
         if writer is not None:
             writer.flush()
