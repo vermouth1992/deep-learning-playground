@@ -66,6 +66,8 @@ class FullyConnectedNet(MachineLearningModel):
             output = relu(output)
             if self.use_dropout and self.is_training:
                 output = dropout(output, self.keep_prob)
+            else:
+                output = dropout(output, 1.0)
 
         weight_name = 'w' + str(self.num_layers)
         bias_name = 'b' + str(self.num_layers)
@@ -78,7 +80,7 @@ class FullyConnectedNet(MachineLearningModel):
         return reg_loss + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y, logits=self.inference(X)))
 
     def check_accuracy(self, X, Y):
-        self.is_training = True
+        self.is_training = False
         predicted = tf.argmax(self.inference(tf.cast(X, dtype=self.dtype)), axis=1)
         expected = tf.argmax(Y, axis=1)
         return tf.reduce_mean(tf.cast(tf.equal(predicted, expected), tf.float32))
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     with tf.Session(graph=graph) as sess:
         model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100, 100, 100],
                                   num_classes=10,
-                                  weight_scale=1e-2, reg=1e-7, use_batch_norm=True, keep_prob=-1)
+                                  weight_scale=1e-2, reg=1e-7, use_batch_norm=True, keep_prob=0.75)
         solver = Solver(model, training_data, dtype=np.float32, graph=graph, sess=sess,
                         optimizer='momentum', optimizer_config={'learning_rate': 1e-1, 'decay_rate': 0.95},
                         batch_size=128, num_epochs=10, export_summary=False)

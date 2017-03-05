@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import time
+import progressbar
 
 class Solver(object):
     """
@@ -33,6 +34,7 @@ class Solver(object):
         self.summary_config = kwargs.pop('summary_config', None)
 
     def build_computation_graph(self):
+        print 'build computation graph...'
         with self.graph.as_default():
             tf.set_random_seed(1337)    # for reproduction
             with tf.name_scope('steps'):
@@ -86,7 +88,7 @@ class Solver(object):
         writer = None
         if self.export_summary:
             if 'path' not in self.summary_config:
-                raise ValueError('Must specify the path to export summary')
+                raise KeyError('Must specify the path to export summary')
             path = self.summary_config['path']
             writer = tf.summary.FileWriter(path, self.graph)
 
@@ -100,6 +102,11 @@ class Solver(object):
             batch_mask_list = np.array_split(arr, self.num_training_samples / self.batch_size)
             total_loss = 0.0
             step = self.sess.run(increment_step)
+
+            print 'Epoch: %d/%d' % (step, self.num_epochs)
+
+            bar = progressbar.ProgressBar(redirect_stdout=False, max_value=self.num_training_samples)
+            current_processed_num = 0
             for batch_mask in batch_mask_list:
                 X = self.X_train[batch_mask]
                 Y = self.y_train[batch_mask]
@@ -111,6 +118,10 @@ class Solver(object):
                     _, l = self.sess.run([optimizer, loss], feed_dict=feed_dict)
 
                 total_loss += l
+
+                current_processed_num += len(batch_mask)
+                bar.update(current_processed_num)
+
             self.learning_rate.assign(tf.multiply(self.learning_rate, self.decay_rate))
             # check training accuracy
             training_accuracy = self.sess.run(check_accuracy, feed_dict={self.model.X: self.X_train,
@@ -123,9 +134,8 @@ class Solver(object):
 
             elapse = time.time() - start
 
-            print 'Epoch: %d/%d - elapse: %.4fs' % (step, self.num_epochs, elapse)
-            print 'loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - ' % \
-                  (avg_loss, training_accuracy, avg_val_loss, val_accuracy)
+            print 'loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - elapse: %.4fs' % \
+                  (avg_loss, training_accuracy, avg_val_loss, val_accuracy, elapse)
 
         if writer is not None:
             writer.flush()

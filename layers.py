@@ -48,3 +48,4 @@ def batch_norm(X, is_training, bn_param, momentum=0.9, epsilon=1e-5):
 
 def dropout(X, keep_prob):
     return tf.nn.dropout(X, keep_prob=keep_prob)
+
