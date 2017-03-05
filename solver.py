@@ -3,6 +3,7 @@ import numpy as np
 import time
 import progressbar
 
+
 class Solver(object):
     """
     A generic solver for any classification problem
@@ -36,7 +37,7 @@ class Solver(object):
     def build_computation_graph(self):
         print 'build computation graph...'
         with self.graph.as_default():
-            tf.set_random_seed(1337)    # for reproduction
+            tf.set_random_seed(1337)  # for reproduction
             with tf.name_scope('steps'):
                 global_step = tf.Variable(initial_value=0, dtype=tf.int32, trainable=False, name='global_step')
                 increment_step = global_step.assign_add(1)
@@ -122,6 +123,7 @@ class Solver(object):
                 current_processed_num += len(batch_mask)
                 bar.update(current_processed_num)
 
+            bar.finish()
             self.learning_rate.assign(tf.multiply(self.learning_rate, self.decay_rate))
             # check training accuracy
             training_accuracy = self.sess.run(check_accuracy, feed_dict={self.model.X: self.X_train,
