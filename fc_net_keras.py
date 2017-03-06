@@ -16,22 +16,22 @@ from keras.engine.topology import Layer
 def create_model():
     model = Sequential()
     model.add(Flatten(input_shape=(32, 32, 3)))
-    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.001)))
+    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.00)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.25))
+    # model.add(Dropout(0.25))
 
-    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.001)))
+    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.00)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.25))
+    # model.add(Dropout(0.25))
 
-    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.001)))
+    model.add(Dense(output_dim=100, init='he_normal', W_regularizer=l2(0.00)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.25))
+    # model.add(Dropout(0.25))
 
-    model.add(Dense(output_dim=10, init='he_normal', W_regularizer=l2(0.001)))
+    model.add(Dense(output_dim=10, init='he_normal', W_regularizer=l2(0.00)))
     model.add(Activation('softmax'))
 
     return model
@@ -53,7 +53,10 @@ if __name__ == '__main__':
     num_training = int(X_train.shape[0] * 0.98)
     train_mask = range(num_training)
     val_mask = range(num_training, X_train.shape[0])
+    dev_mask = range(int(X_train.shape[0] * 0.001))  # use to overfit the model
 
+    X_dev = X_train[dev_mask]
+    y_dev = y_train[dev_mask]
     X_val = X_train[val_mask]
     y_val = y_train[val_mask]
     X_train = X_train[train_mask]
@@ -66,7 +69,7 @@ if __name__ == '__main__':
 
     model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=1e-1), metrics=['accuracy'])
 
-    model.fit(X_train, y_train, batch_size=128, nb_epoch=10, verbose=1, validation_data=(X_val, y_val))
+    model.fit(X_dev, y_dev, batch_size=50, nb_epoch=100, verbose=1, validation_data=(X_val, y_val))
 
     score = np.mean((np.argmax(model.predict(X_test), axis=1) == y_test).astype(np.float32))
     print 'Test accuracy', score

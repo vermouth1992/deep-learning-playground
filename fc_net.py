@@ -81,7 +81,7 @@ class FullyConnectedNet(MachineLearningModel):
 
     def check_accuracy(self, X, Y):
         self.is_training = False
-        predicted = tf.argmax(self.inference(tf.cast(X, dtype=self.dtype)), axis=1)
+        predicted = tf.argmax(tf.nn.softmax(self.inference(tf.cast(X, dtype=self.dtype))), axis=1)
         expected = tf.argmax(Y, axis=1)
         return tf.reduce_mean(tf.cast(tf.equal(predicted, expected), tf.float32))
 
@@ -102,7 +102,10 @@ if __name__ == '__main__':
     num_training = int(X_train.shape[0] * 0.98)
     train_mask = range(num_training)
     val_mask = range(num_training, X_train.shape[0])
+    dev_mask = range(int(X_train.shape[0] * 0.01))  # use to overfit the model
 
+    X_dev = X_train[dev_mask]
+    y_dev = y_train[dev_mask]
     X_val = X_train[val_mask]
     y_val = y_train[val_mask]
     X_train = X_train[train_mask]
@@ -113,7 +116,7 @@ if __name__ == '__main__':
     X_val -= mean_image
     X_test -= mean_image
 
-    training_data = {'X_train': X_train, 'y_train': y_train,
+    training_data = {'X_train': X_dev, 'y_train': y_dev,
                      'X_val': X_val, 'y_val': y_val}
 
     print 'Train data shape: ', X_train.shape
@@ -127,10 +130,10 @@ if __name__ == '__main__':
     with tf.Session(graph=graph) as sess:
         model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100, 100, 100],
                                   num_classes=10,
-                                  weight_scale=1e-2, reg=1e-7, use_batch_norm=True, keep_prob=0.75)
+                                  weight_scale=0.141, reg=0.0, use_batch_norm=True, keep_prob=1.0)
         solver = Solver(model, training_data, dtype=np.float32, graph=graph, sess=sess,
-                        optimizer='momentum', optimizer_config={'learning_rate': 1e-1, 'decay_rate': 0.95},
-                        batch_size=128, num_epochs=10, export_summary=False)
+                        optimizer='adam', optimizer_config={'learning_rate': 1e-1, 'decay_rate': 0.95},
+                        batch_size=50, num_epochs=100, export_summary=False)
         solver.train()
         accuracy = sess.run(model.check_accuracy(X_test, y_test))
 

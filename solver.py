@@ -108,6 +108,7 @@ class Solver(object):
 
             bar = progressbar.ProgressBar(redirect_stdout=False, max_value=self.num_training_samples)
             current_processed_num = 0
+
             for batch_mask in batch_mask_list:
                 X = self.X_train[batch_mask]
                 Y = self.y_train[batch_mask]
@@ -124,21 +125,42 @@ class Solver(object):
                 bar.update(current_processed_num)
 
             bar.finish()
+            # decay the learning rate
             self.learning_rate.assign(tf.multiply(self.learning_rate, self.decay_rate))
-            # check training accuracy
-            training_accuracy = self.sess.run(check_accuracy, feed_dict={self.model.X: self.X_train,
-                                                                         self.model.Y: self.y_train})
-            avg_loss = total_loss / self.num_training_samples
-            # check validation loss
-            val_loss, val_accuracy = self.sess.run([loss, check_accuracy],
-                                                   feed_dict={self.model.X: self.X_val, self.model.Y: self.y_val})
-            avg_val_loss = val_loss / self.num_val_samples
+
+            # training date accuracy
+            correct_predicted = 0
+            for batch_mask in batch_mask_list:
+                X = self.X_train[batch_mask]
+                Y = self.y_train[batch_mask]
+                feed_dict = {self.model.X: X, self.model.Y: Y}
+                correct_predicted_batch = self.sess.run(check_accuracy, feed_dict=feed_dict) * len(batch_mask)
+
+                correct_predicted += int(correct_predicted_batch)
+
+            avg_loss = total_loss
+            training_accuracy = float(correct_predicted) / self.num_training_samples
+
+            # validation data
+            batch_mask_list = np.array_split(np.arange(self.num_val_samples), self.num_val_samples / self.batch_size)
+            val_loss, val_correct_predicted = 0.0, 0
+            for batch_mask in batch_mask_list:
+                X = self.X_val[batch_mask]
+                Y = self.y_val[batch_mask]
+                feed_dict = {self.model.X: X, self.model.Y: Y}
+                val_loss_batch, val_accuracy = self.sess.run([loss, check_accuracy], feed_dict=feed_dict)
+                val_loss += val_loss_batch
+                val_correct_predicted += val_accuracy * len(batch_mask)
+
+            avg_val_loss = val_loss
+            val_accuracy = float(val_correct_predicted) / self.num_val_samples
 
             elapse = time.time() - start
 
-            print 'loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - elapse: %.4fs' % \
+            print 'loss: %.4f - acc: %.4f - val_loss: %.4f - val_acc: %.4f - total elapse: %.4fs' % \
                   (avg_loss, training_accuracy, avg_val_loss, val_accuracy, elapse)
 
         if writer is not None:
             writer.flush()
             writer.close()
+

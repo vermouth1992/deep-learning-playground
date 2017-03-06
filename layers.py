@@ -33,7 +33,7 @@ def batch_norm(X, is_training, bn_param, momentum=0.9, epsilon=1e-5):
     if 'pop_var' in bn_param:
         pop_var = bn_param['pop_var']
     else:
-        pop_var = tf.Variable(tf.ones([X.get_shape()[-1]]), trainable=False)
+        pop_var = tf.Variable(tf.zeros([X.get_shape()[-1]]), trainable=False)
         bn_param['pop_var'] = pop_var
 
     if is_training:
@@ -44,6 +44,13 @@ def batch_norm(X, is_training, bn_param, momentum=0.9, epsilon=1e-5):
             return tf.nn.batch_normalization(X, batch_mean, batch_var, beta, scale, epsilon)
     else:
         return tf.nn.batch_normalization(X, pop_mean, pop_var, beta, scale, epsilon)
+
+
+def spatial_batch_norm(X, is_training, bn_param, momentum=0.9, epsilon=1e-5):
+    num_channel = X.get_shape().as_list()[-1]
+    out = tf.reshape(X, [-1, num_channel])
+    out = batch_norm(out, is_training, bn_param, momentum, epsilon)
+    return tf.reshape(out, shape=tf.shape(X))
 
 
 def dropout(X, keep_prob):
