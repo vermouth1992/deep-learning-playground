@@ -31,14 +31,14 @@ def load_CIFAR10(ROOT):
     return Xtr, Ytr, Xte, Yte
 
 
-def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
+def get_CIFAR10_data(cifar10_dir='/Users/chizhang/Documents/Deep Learning Resources/datasets/cifar-10-batches-py',
+                     num_training=49000, num_validation=1000, num_test=1000, subtract_mean=True):
     """
     Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
     it for classifiers. These are the same steps as we used for the SVM, but
     condensed to a single function.
     """
     # Load the raw CIFAR-10 data
-    cifar10_dir = 'cs231n/datasets/cifar-10-batches-py'
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 
     # Subsample the data
@@ -53,10 +53,11 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
     y_test = y_test[mask]
 
     # Normalize the data: subtract the mean image
-    mean_image = np.mean(X_train, axis=0)
-    X_train -= mean_image
-    X_val -= mean_image
-    X_test -= mean_image
+    if subtract_mean:
+        mean_image = np.mean(X_train, axis=0)
+        X_train -= mean_image
+        X_val -= mean_image
+        X_test -= mean_image
 
     # Transpose so that channels come first
     X_train = X_train.transpose(0, 3, 1, 2).copy()
@@ -71,7 +72,7 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
     }
 
 
-def load_tiny_imagenet(path, dtype=np.float32):
+def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
     """
     Load TinyImageNet. Each of TinyImageNet-100-A, TinyImageNet-100-B, and
     TinyImageNet-200 have the same directory structure, so this can be used
@@ -80,8 +81,9 @@ def load_tiny_imagenet(path, dtype=np.float32):
     Inputs:
     - path: String giving path to the directory to load.
     - dtype: numpy datatype used to load the data.
+    - subtract_mean: Whether to subtract the mean training image.
 
-    Returns: A tuple of
+    Returns: A dictionary with the following entries:
     - class_names: A list where class_names[i] is a list of strings giving the
       WordNet names for class i in the loaded dataset.
     - X_train: (N_tr, 3, 64, 64) array of training images
@@ -91,6 +93,7 @@ def load_tiny_imagenet(path, dtype=np.float32):
     - X_test: (N_test, 3, 64, 64) array of testing images.
     - y_test: (N_test,) array of test labels; if test labels are not available
       (such as in student code) then y_test will be None.
+    - mean_image: (3, 64, 64) array giving mean training image
     """
     # First load wnids
     with open(os.path.join(path, 'wnids.txt'), 'r') as f:
@@ -175,7 +178,23 @@ def load_tiny_imagenet(path, dtype=np.float32):
         y_test = [wnid_to_label[img_file_to_wnid[img_file]] for img_file in img_files]
         y_test = np.array(y_test)
 
-    return class_names, X_train, y_train, X_val, y_val, X_test, y_test
+    mean_image = X_train.mean(axis=0)
+    if subtract_mean:
+        X_train -= mean_image[None]
+        X_val -= mean_image[None]
+        X_test -= mean_image[None]
+
+    return {
+        'class_names': class_names,
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_val': X_val,
+        'y_val': y_val,
+        'X_test': X_test,
+        'y_test': y_test,
+        'class_names': class_names,
+        'mean_image': mean_image,
+    }
 
 
 def load_models(models_dir):
