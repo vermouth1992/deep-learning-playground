@@ -1,16 +1,12 @@
 import numpy as np
-from collections import Counter
 
 np.random.seed(1337)  # for reproducibility
 
-from keras.models import Sequential, Model
-from keras.layers import Input, Dense, Dropout, Activation, Flatten, merge
-from keras.layers import Convolution2D, MaxPooling2D, BatchNormalization
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Flatten
+from keras.layers import BatchNormalization
 from keras.regularizers import l2
-from keras.utils import np_utils
-from keras.optimizers import SGD, Adam
-from keras import backend as K
-from keras.engine.topology import Layer
+from keras.optimizers import Adam
 
 
 def create_model():
@@ -38,7 +34,7 @@ def create_model():
 
 if __name__ == '__main__':
     model = create_model()
-    from data_utils import load_CIFAR10, to_categorical
+    from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
     cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-playground/dataset/cifar-10-batches-py'

@@ -5,17 +5,15 @@ It gets down to 0.65 test logloss in 25 epochs, and down to 0.55 after 50 epochs
 (it's still underfitting at that point, though).
 '''
 
-from keras.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
-from keras.layers import Convolution2D, MaxPooling2D
-from keras.utils import np_utils
-from keras.regularizers import l2
-from keras.optimizers import Adam
-
-from data_utils import get_CIFAR10_data
-
 import numpy as np
+from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.models import Sequential
+from keras.optimizers import Adam
+from keras.regularizers import l2
+from keras.utils import np_utils
+
+from utils.data_utils import get_CIFAR10_data
 
 batch_size = 128
 nb_classes = 10

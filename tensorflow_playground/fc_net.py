@@ -2,11 +2,10 @@
 A fully-connected neural net class
 """
 
-from model import MachineLearningModel
-import tensorflow as tf
-from solver import Solver
-import numpy as np
 from layers import *
+from model import MachineLearningModel
+from model_utils import lazy_property
+from solver import Solver
 
 
 class FullyConnectedNet(MachineLearningModel):
@@ -79,6 +78,7 @@ class FullyConnectedNet(MachineLearningModel):
         reg_loss = self.reg * tf.add_n(reg_loss_lst, 'regularization_loss')
         return reg_loss + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y, logits=self.inference(X)))
 
+    @lazy_property
     def check_accuracy(self, X, Y):
         self.is_training = False
         predicted = tf.argmax(tf.nn.softmax(self.inference(tf.cast(X, dtype=self.dtype))), axis=1)
@@ -87,7 +87,7 @@ class FullyConnectedNet(MachineLearningModel):
 
 
 if __name__ == '__main__':
-    from data_utils import load_CIFAR10, to_categorical
+    from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
     cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-playground/dataset/cifar-10-batches-py'

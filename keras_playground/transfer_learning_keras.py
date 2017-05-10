@@ -6,16 +6,13 @@ import numpy as np
 
 np.random.seed(1337)  # for reproducibility
 
-from keras.models import Sequential, Model
-from keras.layers import Input, Dense, Dropout, Activation, Flatten, merge
-from keras.layers import Convolution2D, MaxPooling2D, BatchNormalization, ZeroPadding2D
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Convolution2D, BatchNormalization, ZeroPadding2D
 from keras.regularizers import l2
-from keras.utils import np_utils
-from keras.optimizers import SGD, Adam
-from keras import backend as K
-from keras.engine.topology import Layer
+from keras.optimizers import Adam
 
-from data_utils import *
+from utils.data_utils import *
 
 input_size = (3, 32, 32)
 nb_classes = 10

@@ -2,10 +2,11 @@
 A logistic regression class
 """
 
-from model import MachineLearningModel
-import tensorflow as tf
-from solver import Solver
 import numpy as np
+import tensorflow as tf
+
+from model import MachineLearningModel
+from solver import Solver
 
 
 class LogisticRegression(MachineLearningModel):
@@ -39,7 +40,7 @@ class LogisticRegression(MachineLearningModel):
 
 
 if __name__ == '__main__':
-    from data_utils import load_CIFAR10, to_categorical
+    from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
     cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-stanford-tutorials/playground/dataset/cifar-10-batches-py'

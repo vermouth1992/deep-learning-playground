@@ -1,10 +1,11 @@
 """
 A simple convolutional neural network for cifar10
 """
-from model import MachineLearningModel
-from layers import *
-from solver import Solver
 import numpy as np
+
+from layers import *
+from model import MachineLearningModel
+from solver import Solver
 
 
 class ConvolutionNeuralNet(MachineLearningModel):
@@ -84,7 +85,7 @@ class ConvolutionNeuralNet(MachineLearningModel):
 
 
 if __name__ == '__main__':
-    from data_utils import load_CIFAR10, to_categorical
+    from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
     cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-playground/dataset/cifar-10-batches-py'
