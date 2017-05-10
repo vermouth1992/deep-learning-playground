@@ -37,7 +37,7 @@ if __name__ == '__main__':
     from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
-    cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-playground/dataset/cifar-10-batches-py'
+    cifar10_dir = '/Users/chizhang/Documents/Deep Learning Resources/datasets/cifar-10-batches-py'
     print 'load cifar10 dataset...'
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 

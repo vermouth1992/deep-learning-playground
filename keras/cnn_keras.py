@@ -91,9 +91,9 @@ def create_model_2():
 
 
 def train_model():
-    model_index = 2
+    model_index = 1
 
-    model = create_model_2()
+    model = create_model_1()
 
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(lr=1e-3),
@@ -152,4 +152,4 @@ def model_ensemble():
 
 
 if __name__ == '__main__':
-    model_ensemble()
+    train_model()

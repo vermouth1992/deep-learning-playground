@@ -10,7 +10,7 @@ def load_CIFAR_batch(filename):
         datadict = pickle.load(f)
         X = datadict['data']
         Y = datadict['labels']
-        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
+        X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float32")
         Y = np.array(Y)
         return X, Y
 
@@ -64,11 +64,16 @@ def get_CIFAR10_data(cifar10_dir='/Users/chizhang/Documents/Deep Learning Resour
     X_val = X_val.transpose(0, 3, 1, 2).copy()
     X_test = X_test.transpose(0, 3, 1, 2).copy()
 
+    dev_mask = range(int(X_train.shape[0] * 0.001))
+    X_dev = X_train[dev_mask]
+    y_dev = y_train[dev_mask]
+
     # Package data into a dictionary
     return {
         'X_train': X_train, 'y_train': y_train,
         'X_val': X_val, 'y_val': y_val,
         'X_test': X_test, 'y_test': y_test,
+        'X_dev': X_dev, 'y_dev': y_dev,
     }
 
 

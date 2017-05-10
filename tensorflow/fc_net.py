@@ -78,7 +78,6 @@ class FullyConnectedNet(MachineLearningModel):
         reg_loss = self.reg * tf.add_n(reg_loss_lst, 'regularization_loss')
         return reg_loss + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y, logits=self.inference(X)))
 
-    @lazy_property
     def check_accuracy(self, X, Y):
         self.is_training = False
         predicted = tf.argmax(tf.nn.softmax(self.inference(tf.cast(X, dtype=self.dtype))), axis=1)
@@ -90,7 +89,7 @@ if __name__ == '__main__':
     from utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
-    cifar10_dir = '/Users/chizhang/Developer/Stanford/tf-playground/dataset/cifar-10-batches-py'
+    cifar10_dir = '/Users/chizhang/Documents/Deep Learning Resources/datasets/cifar-10-batches-py'
     print 'load cifar10 dataset...'
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 
@@ -128,7 +127,7 @@ if __name__ == '__main__':
 
     graph = tf.Graph()
     with tf.Session(graph=graph) as sess:
-        model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100, 100, 100],
+        model = FullyConnectedNet(dtype=tf.float32, input_shape=3 * 32 * 32, hidden_shape=[100],
                                   num_classes=10,
                                   weight_scale=0.141, reg=0.0, use_batch_norm=True, keep_prob=1.0)
         solver = Solver(model, training_data, dtype=np.float32, graph=graph, sess=sess,
