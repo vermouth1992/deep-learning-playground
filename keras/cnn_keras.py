@@ -6,12 +6,13 @@ It gets down to 0.65 test logloss in 25 epochs, and down to 0.55 after 50 epochs
 '''
 
 import numpy as np
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.regularizers import l2
 from keras.utils import np_utils
+import keras.backend as K
 
 from utils.data_utils import get_CIFAR10_data
 
@@ -43,7 +44,7 @@ Y_val = np_utils.to_categorical(y_val, nb_classes)
 def create_model_1():
     model = Sequential()
 
-    model.add(Convolution2D(32, 3, 3, border_mode='same', input_shape=X_train.shape[1:], W_regularizer=l2(reg),
+    model.add(Conv2D(32, (3, 3), padding='same', input_shape=(3, 32, 32), kernel_regularizer=l2(reg),
                             name='conv1'))
     model.add(BatchNormalization(axis=1, name='conv1_batch'))
     model.add(Activation('relu'))
@@ -51,12 +52,12 @@ def create_model_1():
     model.add(Dropout(0.5))
 
     model.add(Flatten())
-    model.add(Dense(512, W_regularizer=l2(reg), name='fc1'))
+    model.add(Dense(512, kernel_regularizer=l2(reg), name='fc1'))
     model.add(BatchNormalization(name='fc1_batch'))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
 
-    model.add(Dense(nb_classes, W_regularizer=l2(reg), name='fc2'))
+    model.add(Dense(nb_classes, kernel_regularizer=l2(reg), name='fc2'))
     model.add(Activation('softmax'))
 
     return model
@@ -65,26 +66,26 @@ def create_model_1():
 def create_model_2():
     model = Sequential()
 
-    model.add(Convolution2D(16, 3, 3, border_mode='same', input_shape=X_train.shape[1:], W_regularizer=l2(reg),
+    model.add(Conv2D(16, (3, 3), padding='same', input_shape=(3, 32, 32), kernel_regularizer=l2(reg),
                             name='conv1'))
     model.add(BatchNormalization(axis=1, name='conv1_batch'))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
 
-    model.add(Convolution2D(32, 3, 3, border_mode='same', W_regularizer=l2(reg), name='conv2'))
+    model.add(Conv2D(32, (3, 3), padding='same', kernel_regularizer=l2(reg), name='conv2'))
     model.add(BatchNormalization(axis=1, name='conv2_batch'))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
 
     model.add(Flatten())
-    model.add(Dense(512, W_regularizer=l2(reg), name='fc1'))
+    model.add(Dense(512, kernel_regularizer=l2(reg), name='fc1'))
     model.add(BatchNormalization(name='fc1_batch'))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
 
-    model.add(Dense(nb_classes, W_regularizer=l2(reg), name='fc2'))
+    model.add(Dense(nb_classes, kernel_regularizer=l2(reg), name='fc2'))
     model.add(Activation('softmax'))
 
     return model
@@ -152,4 +153,4 @@ def model_ensemble():
 
 
 if __name__ == '__main__':
-    train_model()
+    model_ensemble()
