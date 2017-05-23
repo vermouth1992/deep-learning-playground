@@ -21,7 +21,7 @@ num_classes = 10
 data_augmentation = True
 
 # The data, shuffled and split between train and test sets:
-data = get_CIFAR10_data(cifar10_dir='/home/chi/Documents/Deep Learning Resources/datasets/cifar-10-batches-py')
+data = get_CIFAR10_data(cifar10_dir='~/Documents/Deep Learning Resources/datasets/cifar-10-batches-py')
 x_train = data['X_train'].transpose(0, 2, 3, 1)
 y_train = data['y_train']
 x_val = data['X_val'].transpose(0, 2, 3, 1)
@@ -36,6 +36,7 @@ print(x_train.shape[0], 'test samples')
 # Convert class vectors to binary class matrices.
 y_train = keras.utils.to_categorical(y_train, num_classes)
 y_val = keras.utils.to_categorical(y_val, num_classes)
+y_test = keras.utils.to_categorical(y_test, num_classes)
 
 model = Sequential()
 
@@ -47,7 +48,7 @@ model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal'))
 model.add(BatchNormalization(axis=-1))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.1))
+model.add(Dropout(0.25))
 
 model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
 model.add(BatchNormalization(axis=-1))
@@ -56,7 +57,7 @@ model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
 model.add(BatchNormalization(axis=-1))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Dropout(0.1))
+model.add(Dropout(0.25))
 
 model.add(Flatten())
 model.add(Dense(512))
@@ -122,8 +123,8 @@ else:
                             validation_data=(x_val, y_val))
 
         # check accuracy
-        predict = model.predict_classes(x_test, batch_size=128)
-        print("Accuracy = " + str(np.mean(predict == y_test)))
+        loss, accuracy = model.evaluate(x_test, y_test)
+        print("Accuracy = " + str(accuracy))
         text = raw_input("Save weights?\n")
         if text == 'yes' or text == 'y':
             print('Saving weights...')
