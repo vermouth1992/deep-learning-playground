@@ -191,14 +191,18 @@ def VGG16(include_top=True, weights='imagenet',
 
 
 if __name__ == '__main__':
-    model = VGG16(include_top=True, weights='imagenet')
+    import os
+    from keras.utils import np_utils
 
-    img_path = 'elephant.jpg'
-    img = image.load_img(img_path, target_size=(224, 224))
-    x = image.img_to_array(img)
-    x = np.expand_dims(x, axis=0)
+    model = VGG16(include_top=True, weights='imagenet')
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+    data = np.load(os.path.expanduser('~/Documents/Deep Learning Resources/datasets/ILSVRC2012_img_val_224x224/val_batch_0.npz'))
+    x = data['data']
+    y = data['labels']
+    y = np_utils.to_categorical(y, num_classes=1000)
     x = preprocess_input(x)
     print('Input image shape:', x.shape)
-
-    preds = model.predict(x)
-    print('Predicted:', decode_predictions(preds))
+    loss, accuracy = model.evaluate(x, y)
+    print('Loss:', loss)
+    print('Accuracy', accuracy)

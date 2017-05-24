@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''ResNet50 model for Keras.
 
+On ImageNet-2012, this model gets to a top-1 validation accuracy of 0.681.
+and a top-5 validation accuracy of 0.883.
+
 # Reference:
 
 - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
