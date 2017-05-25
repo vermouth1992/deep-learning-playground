@@ -11,7 +11,7 @@ from xception import Xception
 import numpy as np
 import h5py
 
-model_name = 'resnet50'
+model_name = 'inception_v3'
 
 def preprocess_input_inception(x):
     x /= 255.
@@ -52,7 +52,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy',
 accuracy_lst, top_5_accuracy_lst = [], []
 
 def get_batch(index):
-    filepath = os.path.expanduser('~/Documents/Deep Learning Resources/datasets/ILSVRC2012_img_val_' + str(imagesize) +
+    filepath = os.path.expanduser('~/Documents/Deep Learning Resources/datasets/imagenet/ILSVRC2012_img_val_' + str(imagesize) +
                                   'x' + str(imagesize) + '/val_batch_' + str(index) + '.h5')
     f = h5py.File(filepath, 'r')
     x = f['data'][:].astype('float32')

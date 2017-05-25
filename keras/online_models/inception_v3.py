@@ -5,6 +5,9 @@ Note that the input image format for this model is different than for
 the VGG16 and ResNet models (299x299 instead of 224x224),
 and that the input preprocessing function is also different (same as Xception).
 
+On ImageNet-2012, this model gets to a top-1 validation accuracy of 0.76276.
+and a top-5 validation accuracy of 0.93032.
+
 # Reference
 
 - [Rethinking the Inception Architecture for Computer Vision](http://arxiv.org/abs/1512.00567)

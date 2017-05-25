@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''VGG19 model for Keras.
 
+On ImageNet-2012, this model gets to a top-1 validation accuracy of 0.6473.
+and a top-5 validation accuracy of 0.85882.
+
 # Reference:
 
 - [Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
