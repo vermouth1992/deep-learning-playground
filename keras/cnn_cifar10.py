@@ -20,116 +20,129 @@ batch_size = 32
 num_classes = 10
 data_augmentation = True
 
-# The data, shuffled and split between train and test sets:
-data = get_CIFAR10_data(cifar10_dir='~/Documents/Deep Learning Resources/datasets/cifar-10-batches-py')
-x_train = data['X_train'].transpose(0, 2, 3, 1)
-y_train = data['y_train']
-x_val = data['X_val'].transpose(0, 2, 3, 1)
-y_val = data['y_val']
-x_test = data['X_test'].transpose(0, 2, 3, 1)
-y_test = data['y_test']
 
-print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
-print(x_train.shape[0], 'test samples')
+def get_cifar10_dataset():
+    # The data, shuffled and split between train and test sets:
+    data = get_CIFAR10_data(cifar10_dir='~/Documents/Deep Learning Resources/datasets/cifar-10-batches-py',
+                            num_training=50000, num_validation=0, num_test=10000)
+    x_train = data['X_train'].transpose(0, 2, 3, 1)
+    y_train = data['y_train']
+    x_val = data['X_val'].transpose(0, 2, 3, 1)
+    y_val = data['y_val']
+    x_test = data['X_test'].transpose(0, 2, 3, 1)
+    y_test = data['y_test']
 
-# Convert class vectors to binary class matrices.
-y_train = keras.utils.to_categorical(y_train, num_classes)
-y_val = keras.utils.to_categorical(y_val, num_classes)
-y_test = keras.utils.to_categorical(y_test, num_classes)
+    print('x_train shape:', x_train.shape)
+    print(x_train.shape[0], 'train samples')
+    print(x_test.shape[0], 'test samples')
 
-model = Sequential()
+    # Convert class vectors to binary class matrices.
+    y_train = keras.utils.to_categorical(y_train, num_classes)
+    y_val = keras.utils.to_categorical(y_val, num_classes)
+    y_test = keras.utils.to_categorical(y_test, num_classes)
 
-model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal',
-                 input_shape=x_train.shape[1:]))
-model.add(BatchNormalization(axis=-1))
-model.add(Activation('relu'))
-model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal'))
-model.add(BatchNormalization(axis=-1))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
+    x_train = x_train.astype('float32')
+    x_val = x_val.astype('float32')
+    x_test = x_test.astype('float32')
+    x_train /= 255
+    x_val /= 255
+    x_test /= 255
 
-model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
-model.add(BatchNormalization(axis=-1))
-model.add(Activation('relu'))
-model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
-model.add(BatchNormalization(axis=-1))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
+    return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
-model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dropout(0.5))
-model.add(Dense(num_classes))
-model.add(Activation('softmax'))
+def create_model():
 
-# initiate RMSprop optimizer
-opt = keras.optimizers.adam(lr=1e-4, decay=1e-6)
+    model = Sequential()
 
-# Let's train the model using Adam
-model.compile(loss='categorical_crossentropy',
-              optimizer=opt,
-              metrics=['accuracy'])
+    model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal',
+                     input_shape=(32, 32, 3)))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Activation('relu'))
+    model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal'))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # model.add(Dropout(0.25))
 
-x_train = x_train.astype('float32')
-x_val = x_val.astype('float32')
-x_test = x_test.astype('float32')
-x_train /= 255
-x_val /= 255
-x_test /= 255
+    model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Activation('relu'))
+    model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    # model.add(Dropout(0.25))
 
-weight_filepath = "cifar-10.h5"
-try:
-    model.load_weights(weight_filepath)
-except:
-    pass
+    model.add(Flatten())
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(num_classes))
+    model.add(Activation('softmax'))
 
-if not data_augmentation:
-    print('Not using data augmentation.')
-    model.fit(x_train, y_train,
-              batch_size=batch_size,
-              epochs=10,
-              validation_data=(x_val, y_val),
-              shuffle=True)
-else:
-    print('Using real-time data augmentation.')
-    # This will do preprocessing and realtime data augmentation:
-    datagen = ImageDataGenerator(
-        featurewise_center=False,  # set input mean to 0 over the dataset
-        samplewise_center=False,  # set each sample mean to 0
-        featurewise_std_normalization=False,  # divide inputs by std of the dataset
-        samplewise_std_normalization=False,  # divide each input by its std
-        zca_whitening=False,  # apply ZCA whitening
-        rotation_range=0,  # randomly rotate images in the range (degrees, 0 to 180)
-        width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
-        height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
-        horizontal_flip=True,  # randomly flip images
-        vertical_flip=False)  # randomly flip images
+    weight_filepath = "cifar-10.h5"
+    try:
+        model.load_weights(weight_filepath)
+    except:
+        pass
 
-    # Compute quantities required for feature-wise normalization
-    # (std, mean, and principal components if ZCA whitening is applied).
-    datagen.fit(x_train)
+    # initiate RMSprop optimizer
+    opt = keras.optimizers.adam(lr=5e-4, decay=1e-6)
 
-    while True:
-        num_epoch = raw_input("Type in number of epoch\n")
-        # Fit the model on the batches generated by datagen.flow().
-        model.fit_generator(datagen.flow(x_train, y_train,
-                                         batch_size=batch_size),
-                            steps_per_epoch=x_train.shape[0] // batch_size,
-                            epochs=int(num_epoch),
-                            validation_data=(x_val, y_val))
+    # Let's train the model using Adam
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=opt,
+                  metrics=['accuracy'])
 
-        # check accuracy
-        loss, accuracy = model.evaluate(x_test, y_test)
-        print("Accuracy = " + str(accuracy))
-        text = raw_input("Save weights?\n")
-        if text == 'yes' or text == 'y':
-            print('Saving weights...')
-            model.save_weights(weight_filepath)
+    return model
 
-        text = raw_input("Continue to train?\n")
-        if text != 'yes' and text != 'y':
-            break
+
+if __name__ == '__main__':
+    (x_train, y_train), (x_val, y_val), (x_test, y_test) = get_cifar10_dataset()
+    model = create_model()
+    if not data_augmentation:
+        print('Not using data augmentation.')
+        model.fit(x_train, y_train,
+                  batch_size=batch_size,
+                  epochs=10,
+                  validation_data=(x_val, y_val),
+                  shuffle=True)
+    else:
+        print('Using real-time data augmentation.')
+        # This will do preprocessing and realtime data augmentation:
+        datagen = ImageDataGenerator(
+            featurewise_center=False,  # set input mean to 0 over the dataset
+            samplewise_center=False,  # set each sample mean to 0
+            featurewise_std_normalization=False,  # divide inputs by std of the dataset
+            samplewise_std_normalization=False,  # divide each input by its std
+            zca_whitening=False,  # apply ZCA whitening
+            rotation_range=0,  # randomly rotate images in the range (degrees, 0 to 180)
+            width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
+            height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
+            horizontal_flip=True,  # randomly flip images
+            vertical_flip=False)  # randomly flip images
+
+        # Compute quantities required for feature-wise normalization
+        # (std, mean, and principal components if ZCA whitening is applied).
+        datagen.fit(x_train)
+
+        while True:
+            num_epoch = raw_input("Type in number of epoch\n")
+            # Fit the model on the batches generated by datagen.flow().
+            model.fit_generator(datagen.flow(x_train, y_train,
+                                             batch_size=batch_size),
+                                steps_per_epoch=x_train.shape[0] // batch_size,
+                                epochs=int(num_epoch),
+                                validation_data=(x_test, y_test))
+
+            # check accuracy
+            # loss, accuracy = model.evaluate(x_test, y_test)
+            # print("Accuracy = " + str(accuracy))
+            text = raw_input("Save weights?\n")
+            if text == 'yes' or text == 'y':
+                print('Saving weights...')
+                model.save_weights(weight_filepath)
+
+            text = raw_input("Continue to train?\n")
+            if text != 'yes' and text != 'y':
+                break
