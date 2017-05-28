@@ -85,7 +85,7 @@ class ConvolutionNeuralNet(MachineLearningModel):
 
 
 if __name__ == '__main__':
-    from utils.data_utils import load_CIFAR10, to_categorical
+    from keras_utils.data_utils import load_CIFAR10, to_categorical
 
     # logistic regression on cifar10
     cifar10_dir = '/Users/chizhang/Documents/Deep Learning Resources/datasets/cifar-10-batches-py'

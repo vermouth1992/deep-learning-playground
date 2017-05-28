@@ -14,7 +14,7 @@ from keras.regularizers import l2
 from keras.utils import np_utils
 import keras.backend as K
 
-from utils.data_utils import get_CIFAR10_data
+from keras_utils.data_utils import get_CIFAR10_data
 
 batch_size = 128
 nb_classes = 10

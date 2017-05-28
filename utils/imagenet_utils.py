@@ -2,7 +2,7 @@
 # !/usr/bin/python
 
 """
-This file contains utils to create batch file for imagenet 2012 validation data
+This file contains keras_utils to create batch file for imagenet 2012 validation data
 """
 import os
 import shutil

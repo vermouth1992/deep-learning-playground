@@ -12,7 +12,7 @@ from keras.layers import Convolution2D, BatchNormalization, ZeroPadding2D
 from keras.regularizers import l2
 from keras.optimizers import Adam
 
-from utils.data_utils import *
+from keras_utils.data_utils import *
 
 input_size = (3, 32, 32)
 nb_classes = 10

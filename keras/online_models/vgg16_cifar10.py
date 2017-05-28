@@ -15,7 +15,7 @@ from keras.utils import np_utils
 
 import numpy as np
 
-from utils.data_utils import *
+from keras_utils.data_utils import *
 from vgg16 import VGG16
 from vgg19 import VGG19
 from inception_v3 import InceptionV3

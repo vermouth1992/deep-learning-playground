@@ -1,8 +1,9 @@
 # /usr/bin/python
 
 import h5py
+import os
 
-weight_path = '/Users/chizhang/Developer/Stanford/deep-learning-playground/keras/cifar-10.h5'
+weight_path = os.path.expanduser('~/Developer/deep-learning-playground/keras/cifar-10.h5')
 
 def get_weights():
     """
