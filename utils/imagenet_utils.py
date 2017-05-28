@@ -15,6 +15,8 @@ import numpy as np
 import h5py
 
 from keras.preprocessing import image
+from keras.utils import np_utils
+
 
 imagenet_val_dir = "~/Documents/Deep Learning Resources/datasets/ILSVRC2012_img_val/"
 imagenet_val_label_file = "~/Downloads/imagenet_2012_validation_synset_labels.txt"
@@ -104,6 +106,34 @@ def create_imagenet_batch(image_size, batch_index):
     f['data'] = data
     f['labels'] = labels
     f.close()
+
+
+def preprocess_input_inception(x):
+    x /= 255.
+    x -= 0.5
+    x *= 2.
+    return x
+
+
+def get_imagenet_batch(index, imagesize):
+    assert imagesize in [224, 299], 'Unsupported imagesize %d' % (imagesize)
+    assert index >= 0 and index <= 9, 'index must be in [0, 9]'
+    filepath = os.path.expanduser(
+        '~/Documents/Deep Learning Resources/datasets/imagenet/ILSVRC2012_img_val_' + str(imagesize) +
+        'x' + str(imagesize) + '/val_batch_' + str(index) + '.h5')
+    f = h5py.File(filepath, 'r')
+    x = f['data'][:].astype('float32')
+    y = f['labels'][:].astype('int32')
+    y = np_utils.to_categorical(y, num_classes=1000)
+    if imagesize == 224:
+        from keras.applications.imagenet_utils import preprocess_input
+    elif imagesize == 299:
+        preprocess_input = preprocess_input_inception
+    else:
+        raise ValueError('Unknown input imagesize')
+    x = preprocess_input(x)
+    return x, y
+
 
 if __name__ == '__main__':
     for batch_index in range(10):

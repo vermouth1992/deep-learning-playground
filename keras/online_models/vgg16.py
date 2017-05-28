@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''VGG16 model for Keras.
 
+On ImageNet-2012, this model gets to a top-1 validation accuracy of 0.64274.
+and a top-5 validation accuracy of 0.85592.
+
+Truncated version
+On ImageNet-2012, this model gets to a top-1 validation accuracy of 0.59212.
+and a top-5 validation accuracy of 0.82382.
+
 # Reference:
 
 - [Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
@@ -8,26 +15,22 @@
 '''
 from __future__ import print_function
 
-import numpy as np
 import warnings
 
-from keras.models import Model
-from keras.layers import Flatten
-from keras.layers import Dense
-from keras.layers import Input
-from keras.layers import Conv2D
-from keras.layers import MaxPooling2D
-from keras.layers import GlobalMaxPooling2D
-from keras.layers import GlobalAveragePooling2D
-from keras.preprocessing import image
-from keras.utils import layer_utils
-from keras.utils.data_utils import get_file
 from keras import backend as K
-from keras.applications.imagenet_utils import decode_predictions
-from keras.applications.imagenet_utils import preprocess_input
 from keras.applications.imagenet_utils import _obtain_input_shape
 from keras.engine.topology import get_source_inputs
-
+from keras.layers import Conv2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import GlobalAveragePooling2D
+from keras.layers import GlobalMaxPooling2D
+from keras.layers import Input
+from keras.layers import Lambda
+from keras.layers import MaxPooling2D
+from keras.models import Model
+from keras.utils import layer_utils
+from keras.utils.data_utils import get_file
 
 WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels.h5'
 WEIGHTS_PATH_NO_TOP = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5'
@@ -36,7 +39,8 @@ WEIGHTS_PATH_NO_TOP = 'https://github.com/fchollet/deep-learning-models/releases
 def VGG16(include_top=True, weights='imagenet',
           input_tensor=None, input_shape=None,
           pooling=None,
-          classes=1000):
+          classes=1000,
+          truncate=False):
     """Instantiates the VGG16 architecture.
 
     Optionally loads weights pre-trained
@@ -108,39 +112,76 @@ def VGG16(include_top=True, weights='imagenet',
             img_input = Input(tensor=input_tensor, shape=input_shape)
         else:
             img_input = input_tensor
+
+    import sys
+    sys.path.append('../../')
+    from utils.fxp import floating_to_fixed_tf
+
     # Block 1
     x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')(img_input)
+
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 4))(x)
+
     x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 2))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
 
     # Block 2
     x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 2))(x)
     x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 1))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
 
     # Block 3
     x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 0))(x)
     x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv2')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 0))(x)
     x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv3')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 0))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
 
     # Block 4
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 1))(x)
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv2')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 1))(x)
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv3')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 2))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
 
     # Block 5
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv1')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 3))(x)
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv2')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 4))(x)
     x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv3')(x)
+    if truncate:
+        x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 5))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
 
     if include_top:
         # Classification block
         x = Flatten(name='flatten')(x)
         x = Dense(4096, activation='relu', name='fc1')(x)
+        if truncate:
+            x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 8))(x)
         x = Dense(4096, activation='relu', name='fc2')(x)
+        if truncate:
+            x = Lambda(lambda p: floating_to_fixed_tf(p, 16, 9))(x)
         x = Dense(classes, activation='softmax', name='predictions')(x)
     else:
         if pooling == 'avg':
@@ -191,18 +232,49 @@ def VGG16(include_top=True, weights='imagenet',
 
 
 if __name__ == '__main__':
-    import os
-    from keras.utils import np_utils
+    import sys
 
-    model = VGG16(include_top=True, weights='imagenet')
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    sys.path += ['../', '../../']
 
-    data = np.load(os.path.expanduser('~/Documents/Deep Learning Resources/datasets/ILSVRC2012_img_val_224x224/val_batch_0.npz'))
-    x = data['data']
-    y = data['labels']
-    y = np_utils.to_categorical(y, num_classes=1000)
-    x = preprocess_input(x)
-    print('Input image shape:', x.shape)
-    loss, accuracy = model.evaluate(x, y)
-    print('Loss:', loss)
-    print('Accuracy', accuracy)
+    # from utils.fxp import truncate_weights
+    # from utils.imagenet_utils import get_imagenet_batch
+    #
+    import numpy as np
+    #
+    # base_model = VGG16(include_top=True, weights='imagenet')
+    #
+    # x, y = get_imagenet_batch(index=0, imagesize=224)
+    # x = x[0:100]
+    #
+    # del y
+    #
+    # """
+    # Profile VGG16 for typical image input. Get the range of each convolution layer to turn into fixed point representation
+    # """
+    # activations_range = {}
+    # for layer in base_model.layers:
+    #     print(layer.name)
+    #     if 'conv' in layer.name or 'fc' in layer.name or 'input' in layer.name:
+    #         model = Model(inputs=base_model.input, outputs=layer.output)
+    #         activations = model.predict(x, verbose=1)
+    #         print('maximum = ', np.max(np.abs(activations)))
+    #         activations_range[layer.name] = np.max(np.abs(activations))
+    #
+    #         raw_input('Press any key to continue')
+    #
+    #         del activations
+    #         del model
+    #
+    #         raw_input('Press any key to continue')
+
+    from utils.fxp import calculate_fxp_quantization
+
+    activations_max = {'fc1': 78.882149, 'fc2': 27.62369, 'block2_conv1': 7985.8096, 'block2_conv2': 14086.804,
+                       'block4_conv2': 8346.957,
+                       'block4_conv3': 4357.5938, 'block4_conv1': 11680.509, 'block5_conv3': 666.54968,
+                       'block5_conv2': 1080.6305,
+                       'block5_conv1': 2716.1113, 'block1_conv2': 4505.0039, 'block1_conv1': 1100.2955,
+                       'input_1': 151.061,
+                       'block3_conv1': 18423.797, 'block3_conv3': 19275.26, 'block3_conv2': 16394.561}
+    for layer_name in activations_max:
+        print(layer_name, calculate_fxp_quantization(np.array(activations_max[layer_name])))

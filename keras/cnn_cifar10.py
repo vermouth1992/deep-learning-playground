@@ -10,12 +10,12 @@ from __future__ import print_function
 import sys
 
 import keras
-from keras.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Lambda
+from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.models import Sequential
+from keras.preprocessing.image import ImageDataGenerator
 
-from keras_utils.fxp import floating_to_fixed_tf, truncate_weights
+from utils.fxp import floating_to_fixed_tf, truncate_weights
 
 batch_size = 32
 num_classes = 10

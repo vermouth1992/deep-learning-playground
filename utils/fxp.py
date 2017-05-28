@@ -34,13 +34,13 @@ def floating_to_fixed_np(array, bit_len, fraction_len):
     maximum_value = 2 ** (bit_len - 1) - 1
     minimum_value = -maximum_value - 1
     # normalize array to have no fraction
-    array = array * 2 ** fraction_len
+    array *= 2 ** fraction_len
     # apply round
     array = np.round(array)
     # saturation
     array = np.clip(array, minimum_value, maximum_value)
     # re-normalize to fixed point
-    array = array / 2 ** fraction_len
+    array /= 2 ** fraction_len
     return array
 
 
@@ -56,7 +56,7 @@ def calculate_fxp_quantization(array):
     required_bits = int(np.ceil(np.log2(maximum_value)))
     if required_bits < 7:
         bit_len = 8
-    elif required_bits < 7:
+    elif required_bits < 16:
         bit_len = 16
     else:
         raise ValueError('Array contains large number which is not suitable for fixed point')
@@ -64,7 +64,7 @@ def calculate_fxp_quantization(array):
     return bit_len, fraction_len
 
 
-def truncate_weights(model, verbose=1):
+def truncate_weights(model, verbose=True):
     # truncate weights
     for i in range(len(model.layers)):
         layer = model.get_layer(index=i)
