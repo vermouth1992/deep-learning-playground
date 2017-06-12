@@ -58,41 +58,36 @@ def get_cifar10_dataset():
 def create_model():
     model = Sequential()
 
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 6), input_shape=(32, 32, 3)))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 6), input_shape=(32, 32, 3)))
     model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal',
                      input_shape=(32, 32, 3)))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 5)))
-    # model.add(BatchNormalization(axis=-1))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
     model.add(Activation('relu'))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 5)))
+
     model.add(Conv2D(32, (3, 3), padding='same', kernel_initializer='he_normal'))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 2)))
-    # model.add(BatchNormalization(axis=-1))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
     model.add(Activation('relu'))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 4)))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     # model.add(Dropout(0.25))
 
     model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 2)))
-    # model.add(BatchNormalization(axis=-1))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
     model.add(Activation('relu'))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
+
     model.add(Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal'))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 2)))
-    # model.add(BatchNormalization(axis=-1))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 4)))
     model.add(Activation('relu'))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
+
     model.add(MaxPooling2D(pool_size=(2, 2)))
     # model.add(Dropout(0.25))
 
     model.add(Flatten())
     model.add(Dense(512))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 3)))
     model.add(Activation('relu'))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 1)))
     model.add(Dropout(0.5))
     model.add(Dense(num_classes))
-    # model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 1)))
+    model.add(Lambda(lambda x: floating_to_fixed_tf(x, 8, 1)))
     model.add(Activation('softmax'))
 
     try:
@@ -101,7 +96,7 @@ def create_model():
         pass
 
     # initiate RMSprop optimizer
-    opt = keras.optimizers.adam(lr=5e-4, decay=1e-6)
+    opt = keras.optimizers.adam(lr=1e-5, decay=1e-7)
 
     # Let's train the model using Adam
     model.compile(loss='categorical_crossentropy',
@@ -113,7 +108,7 @@ def create_model():
 
 if __name__ == '__main__':
     model = create_model()
-    # truncate_weights(model)
+    truncate_weights(model)
 
     (x_train, y_train), (x_val, y_val), (x_test, y_test) = get_cifar10_dataset()
     if not data_augmentation:
