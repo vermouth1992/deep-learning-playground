@@ -3,6 +3,7 @@ A set of utility functions to get the actual computation complexity of various l
 """
 
 import math
+import warnings
 
 oneGiga = 1e9
 
@@ -30,8 +31,8 @@ def convolutional_layer_direct(imageSize, filterSize, padding='SAME', stride=(1,
     else:
         raise ValueError('Unknown padding')
 
-    out_height = (image_height - filter_height + height_padding) // stride + 1
-    out_width = (image_width - filter_width + width_padding) // stride + 1
+    out_height = (image_height - filter_height + height_padding) // height_stride + 1
+    out_width = (image_width - filter_width + width_padding) // width_stride + 1
     # number of operations to get one result
     numOpMac = filter_height * filter_width * in_channels
     numOpPerResult = 2 * numOpMac + in_channels + 1  # 1 is the bias
@@ -156,4 +157,66 @@ def convolutional_layer_winograd(imageSize, filterSize, padding='SAME', stride=(
     :param fft_size: find the minimum feasible fft size if it is None, (height_fft_size, width_fft_size)
     :return: The number of operations: accumulation + multiplication
     """
-    pass
+    image_height, image_width, in_channels = imageSize
+    filter_height, filter_width, _, out_channels = filterSize
+    assert in_channels == filterSize[2], "image size and filter size must have the same depth."
+    assert filter_height == 3 and filter_width == 3, 'Winograd is only applicable to 3x3 filters'
+    if stride != (1, 1):
+        warnings.warn('For stride not equal to 1, it is generally not recommended to use Winograd algorithm')
+    height_stride, width_stride = stride
+    if padding == 'SAME':
+        height_padding = (image_height - 1) * height_stride - image_height + filter_height
+        width_padding = (image_width - 1) * width_stride - image_width + filter_width
+    elif padding == 'VALID':
+        height_padding = 0
+        width_padding = 0
+    else:
+        raise ValueError('Unknown padding')
+
+    num_tile = ((image_height + height_padding) / 2 - 1) * ((image_width + width_padding) / 2 - 1)
+    # for each 4x4 transform, B'dB
+    num_accumulation_per_transform_result = 2   # based on the paper, intermediate result can be reused
+    num_transform_result = 16
+    transform_add_per_tile = num_accumulation_per_transform_result * num_transform_result
+    total_transform_add = transform_add_per_tile * num_tile * in_channels
+    # mac
+    total_num_mac = num_transform_result * in_channels * num_tile * out_channels
+    # inverse transform
+    num_accumulation_per_inverse_transform_result = 6 # based on the paper, intermediate result can be reused
+    num_inverse_transform_result = 4
+    total_inverse_transform_add = num_accumulation_per_inverse_transform_result * \
+                                  num_inverse_transform_result * num_tile * out_channels
+
+    if inGFLOP:
+        total_transform_add /= oneGiga
+        total_num_mac /= oneGiga
+        total_inverse_transform_add /= oneGiga
+
+    if result_format == 'mac':
+        return total_transform_add, total_num_mac, total_inverse_transform_add
+    elif result_format == 'op':
+        return total_transform_add, total_num_mac * 2, total_inverse_transform_add
+    else:
+        raise ValueError('Unknown result format')
+
+
+def fc_layer(input_width, output_width, inGFLOP=True, result_format='mac'):
+    total_num_mac = input_width * output_width
+    if inGFLOP:
+        total_num_mac /= oneGiga
+    if result_format == 'mac':
+        return total_num_mac
+    elif result_format == 'op':
+        return total_num_mac * 2
+    else:
+        raise ValueError('Unknown result format')
+
+
+def batch_normalization_layer(input_shape, inGLOP=True):
+    N, D = input_shape
+    total_num_add = 2 * N * D
+    total_num_multiplication = 2 * N * D
+    if inGLOP:
+        total_num_add /= oneGiga
+        total_num_multiplication /= oneGiga
+    return total_num_add, total_num_multiplication
