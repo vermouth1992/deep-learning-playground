@@ -3,14 +3,18 @@ Use a 3 layer perceptron to simulate a max function over a vector
 """
 
 import numpy as np
-from keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization
+from keras.layers import Dense, Activation
 from keras.models import Sequential
 from keras.optimizers import Adam
-from keras.regularizers import l2
 from keras.utils import np_utils
 
 
 nb_classes = 16
+
+def normalize(data):
+    max_data = np.max(data, axis=1)
+    min_data = np.min(data, axis=1)
+    return (data - np.expand_dims(min_data, axis=1)) / np.expand_dims(max_data - min_data, axis=1) * 2 - 1
 
 def create_dataset(num_samples, num_features):
     data = np.random.random_sample((num_samples, num_features)) * 2 - 1
@@ -38,6 +42,9 @@ if __name__ == '__main__':
     training_labels = np_utils.to_categorical(training_labels, nb_classes)
     testing_labels = np_utils.to_categorical(testing_labels, nb_classes)
     model = create_network()
-    model.fit(training_data, training_labels, batch_size=128, nb_epoch=20,
+    model.fit(training_data, training_labels, batch_size=128, epochs=10,
               validation_data=(testing_data, testing_labels), shuffle=True)
-    model.evaluate()
+
+    data = np.random.randn(4000, nb_classes)
+    labels = np_utils.to_categorical(np.argmax(data, axis=1), nb_classes)
+    acc = model.evaluate(data, labels)
