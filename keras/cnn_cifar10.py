@@ -27,7 +27,7 @@ weight_filepath = "cifar-10.h5"
 
 def get_cifar10_dataset():
     # The data, shuffled and split between train and test sets:
-    data = get_CIFAR10_data(cifar10_dir='~/Documents/Deep Learning Resources/datasets/cifar-10-batches-py',
+    data = get_CIFAR10_data(cifar10_dir='~/Developer/CS599/assignment1/data/cifar-10-batches-py',
                             num_training=50000, num_validation=0, num_test=10000)
     x_train = data['X_train'].transpose(0, 2, 3, 1)
     y_train = data['y_train']
