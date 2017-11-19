@@ -29,9 +29,9 @@ class ActorNetwork():
         self.model, self.weights, self.state = self.create_actor_network()
         self.target_model, self.target_weights, self.target_state = self.create_actor_network()
         self.action_gradient = tf.placeholder(tf.float32, [None, self.action_size])
-        self.params_grad = tf.gradients(self.model.output, self.weights, -self.action_gradient)
-        grads = zip(self.params_grad, self.weights)
-        self.optimize = tf.train.AdamOptimizer(learning_rate).apply_gradients(grads)
+        self.unnormalized_actor_gradients = tf.gradients(self.model.output, self.weights, -self.action_gradient)
+        self.actor_gradients = list(map(lambda x: tf.div(x, 64), self.unnormalized_actor_gradients))
+        self.optimize = tf.train.AdamOptimizer(learning_rate).apply_gradients(zip(self.actor_gradients, self.weights))
 
     def create_actor_network(self):
         observation_in = Input(shape=(self.feature_size,))
