@@ -14,4 +14,4 @@
 TODO: Implement various deep-rl algorithms including
 - [X] Deep Q-Networks (DQN)
 - [X] DDPG (Deep Deterministic Policy Gradient)
-- [X] A3C (Asynchronous Advantage Actor-Critic )
+- [X] A3C (Asynchronous Advantage Actor-Critic)
