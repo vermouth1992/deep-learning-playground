@@ -110,7 +110,9 @@ class Net(nn.Module):
 
 # train LeNet-5 on cifar-10
 if __name__ == '__main__':
-    from keras_utils.data_utils import *
+    import sys
+    sys.path.append('../')
+    from utils.data_utils import *
 
     cifar10_data = get_CIFAR10_data()
 

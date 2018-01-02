@@ -1,6 +1,6 @@
 import gym
 
-env = gym.make('Pendulum-v0')
+env = gym.make('Pong-ram-v0')
 for i_episode in range(20):
     observation = env.reset()
     for t in range(100):
