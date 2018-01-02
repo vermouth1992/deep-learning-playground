@@ -12,6 +12,6 @@
 * Train a network to approximate XOR and MAX function
 ### PyTorch
 TODO: Implement various deep-rl algorithms including
-- [X] Deep Q-Networks (DQN)
-- [X] DDPG (Deep Deterministic Policy Gradient)
-- [X] A3C (Asynchronous Advantage Actor-Critic)
+- [ ] Deep Q-Networks (DQN)
+- [ ] DDPG (Deep Deterministic Policy Gradient)
+- [ ] A3C (Asynchronous Advantage Actor-Critic)
