@@ -15,3 +15,5 @@ TODO: Implement various deep-rl algorithms including
 - [ ] Deep Q-Networks (DQN)
 - [ ] DDPG (Deep Deterministic Policy Gradient)
 - [ ] A3C (Asynchronous Advantage Actor-Critic)
+- [ ] TRPO (Trust Region Policy Optimization)
+- [ ] PPO (Proximal Policy Optimization)
