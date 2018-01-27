@@ -179,6 +179,11 @@ if __name__ == '__main__':
         print ('Epoch [%d/%d] loss: %.4f, accuracy: %0.4f, validation loss: %0.4f, validation accuracy: %.4f'
                % (epoch + 1, num_epochs, training_loss, training_accuracy, validation_loss, validation_accuracy))
 
+    # save model
+    PATH = 'weights/cifar10'
+    torch.save(net.state_dict(), PATH)
+    net = Net()
+    net.load_state_dict(torch.load(PATH))
     # test
     total, correct = 0.0, 0.0
     test_accuracy = net.check_accuracy_loss(X_test, y_test)
