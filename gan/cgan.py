@@ -48,7 +48,7 @@ class CGAN(object):
         x = Dense(128, kernel_initializer=RandomNormal(0, 0.02))(x)
 
         label_input = Input(shape=(10,), name='label_input')
-        label_dense = Dense(128, kernel_initializer=RandomNormal(0, 0, 02))(label_input)
+        label_dense = Dense(128, kernel_initializer=RandomNormal(0, 0.02))(label_input)
 
         x = keras.layers.concatenate([x, label_dense])
 
@@ -137,11 +137,11 @@ class CGAN(object):
                     print('Iteration {0}: dis loss = {1:.4f}, gen loss = {2:.4f}'.format(step, dis_loss, gen_loss))
         return dis_losses, gen_losses
 
-    def generate_one_sample(self, code):
-        return self.generator.predict(code, verbose=0)
+    def generate_one_sample(self, code, label):
+        return self.generator.predict([code, label], verbose=0)
 
-    def generate(self, codes):
+    def generate(self, codes, labels):
         generated = np.zeros((codes.shape[0], 32, 32, 3))
         for i in range(codes.shape[0]):
-            generated[i:i + 1] = self.generate_one_sample(codes[i:i + 1])
+            generated[i:i + 1] = self.generate_one_sample(codes[i:i + 1], labels[i:i + 1])
         return generated
