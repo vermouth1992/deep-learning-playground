@@ -58,7 +58,7 @@ def load_CIFAR10(ROOT):
 
 
 def get_CIFAR10_data(cifar10_dir=os.path.expanduser('~/Documents/Deep_Learning_Resources/datasets/cifar-10-batches-py'),
-                     num_training=49000, num_validation=1000, num_test=10000, subtract_mean=True):
+                     num_training=49000, num_validation=1000, num_test=10000, subtract_mean=True, channels_first=True):
     """
     Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
     it for classifiers. These are the same steps as we used for the SVM, but
@@ -85,10 +85,11 @@ def get_CIFAR10_data(cifar10_dir=os.path.expanduser('~/Documents/Deep_Learning_R
         X_val -= mean_image
         X_test -= mean_image
 
-    # Transpose so that channels come first
-    X_train = X_train.transpose(0, 3, 1, 2).copy()
-    X_val = X_val.transpose(0, 3, 1, 2).copy()
-    X_test = X_test.transpose(0, 3, 1, 2).copy()
+    if channels_first:
+        # Transpose so that channels come first
+        X_train = X_train.transpose(0, 3, 1, 2).copy()
+        X_val = X_val.transpose(0, 3, 1, 2).copy()
+        X_test = X_test.transpose(0, 3, 1, 2).copy()
 
     dev_mask = range(int(X_train.shape[0] * 0.001))
     X_dev = X_train[dev_mask]
@@ -132,3 +133,24 @@ def load_test_data():
     X_, _ = unpickle(os.path.expanduser('~/Documents/Deep_Learning_Resources/datasets/cifar-10-batches-py/test_batch'))
     X = X_.reshape((X_.shape[0], 3, 32, 32)).transpose(0, 2, 3, 1)
     return X
+
+def to_categorical(y, nb_classes=None):
+    """Converts a class vector (integers) to binary class matrix.
+
+    E.g. for use with categorical_crossentropy.
+
+    # Arguments
+        y: class vector to be converted into a matrix
+            (integers from 0 to nb_classes).
+        nb_classes: total number of classes.
+
+    # Returns
+        A binary matrix representation of the input.
+    """
+    y = np.array(y, dtype='int').ravel()
+    if not nb_classes:
+        nb_classes = np.max(y) + 1
+    n = y.shape[0]
+    categorical = np.zeros((n, nb_classes))
+    categorical[np.arange(n), y] = 1
+    return categorical
