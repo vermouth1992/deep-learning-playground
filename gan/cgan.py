@@ -125,7 +125,10 @@ class CGAN(object):
 
                 self.discriminator.trainable = False
 
-                gen_loss = self.discriminator_generator.train_on_batch([noise, label_samples], [1] * self.batch_size)
+                sampled_labels = np.random.randint(low=0, high=10, size=self.batch_size)
+                sampled_labels = keras.utils.to_categorical(sampled_labels, 10)
+
+                gen_loss = self.discriminator_generator.train_on_batch([noise, sampled_labels], [1] * self.batch_size)
 
                 plot_dis_s = plot_dis_s * smooth_factor + dis_loss * (1 - smooth_factor)
                 plot_gen_s = plot_gen_s * smooth_factor + gen_loss * (1 - smooth_factor)
