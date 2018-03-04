@@ -8,6 +8,7 @@ from keras.layers import Conv2D, Conv2DTranspose, LeakyReLU, BatchNormalization,
     Activation
 from keras.models import Sequential
 from keras.optimizers import RMSprop
+from keras.initializers import RandomNormal
 
 
 class DCGAN(object):
@@ -19,49 +20,52 @@ class DCGAN(object):
         self.num_epoch = 5
         self.log_step = 50
 
+        self.generator = self._create_generator()
+        self.generator.compile(loss='binary_crossentropy', optimizer=RMSprop(self.learning_rate))
         self.discriminator = self._create_discriminator()
         self.discriminator.compile(loss='binary_crossentropy', optimizer=RMSprop(self.learning_rate))
-        self.generator = self._create_generator()
+
+        self.discriminator.trainable = False
         self.discriminator_generator = self._combine_generator_discriminator()
         self.discriminator_generator.compile(loss='binary_crossentropy', optimizer=RMSprop(self.learning_rate))
+
 
     def _create_discriminator(self):
         model = Sequential()
         model.add(InputLayer(input_shape=(32, 32, 3)))
-        model.add(Conv2D(filters=32, kernel_size=(4, 4), strides=(2, 2), padding='same'))
-        model.add(LeakyReLU())
-        model.add(Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same'))
+        model.add(Conv2D(filters=32, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
         model.add(BatchNormalization())
-        model.add(LeakyReLU())
-        model.add(Conv2D(filters=128, kernel_size=(4, 4), strides=(2, 2), padding='same'))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(Conv2D(filters=128, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
         model.add(BatchNormalization())
-        model.add(LeakyReLU())
+        model.add(LeakyReLU(alpha=0.2))
         model.add(Flatten())
-        model.add(Dense(1))
+        model.add(Dense(1, kernel_initializer=RandomNormal(0, 0.02)))
         model.add(Activation('sigmoid'))  # the probability that it is real or not
         return model
 
     def _create_generator(self):
         model = Sequential()
         model.add(InputLayer(input_shape=(64,)))
-        model.add(Dense(4 * 4 * 128))
+        model.add(Dense(4 * 4 * 128, kernel_initializer=RandomNormal(0, 0.02)))
         model.add(Reshape(target_shape=(4, 4, 128)))
         model.add(BatchNormalization())
-        model.add(LeakyReLU())
-        model.add(Conv2DTranspose(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same'))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(Conv2DTranspose(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
         model.add(BatchNormalization())
-        model.add(LeakyReLU())
-        model.add(Conv2DTranspose(filters=32, kernel_size=(4, 4), strides=(2, 2), padding='same'))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(Conv2DTranspose(filters=32, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
         model.add(BatchNormalization())
-        model.add(LeakyReLU())
-        model.add(Conv2DTranspose(filters=3, kernel_size=(4, 4), strides=(2, 2), padding='same'))
+        model.add(LeakyReLU(alpha=0.2))
+        model.add(Conv2DTranspose(filters=3, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=RandomNormal(0, 0.02)))
         model.add(Activation('sigmoid'))
         return model
 
     def _combine_generator_discriminator(self):
         model = Sequential()
         model.add(self.generator)
-        self.discriminator.trainable = False
         model.add(self.discriminator)
         return model
 
@@ -81,20 +85,19 @@ class DCGAN(object):
             for i in range(num_train // self.batch_size):
                 step += 1
 
-                self.discriminator.trainable = True
-
                 batch_samples = train_samples[i * self.batch_size: (i + 1) * self.batch_size]
                 noise = np.random.normal(0, 1, [self.batch_size, self.code_size])
                 generated_images = self.generator.predict(noise, verbose=0)
-                X = np.concatenate((batch_samples, generated_images))
-                zeros = np.zeros([self.batch_size])
-                ones = np.ones([self.batch_size])
-                y = np.concatenate((ones, zeros))
-                dis_loss = self.discriminator.train_on_batch(X, y)
+
+                self.discriminator.trainable = True
+
+                dis_loss_images = self.discriminator.train_on_batch(batch_samples, [1] * self.batch_size)
+                dis_loss_noise = self.discriminator.train_on_batch(generated_images, [0] * self.batch_size)
+                dis_loss = dis_loss_images + dis_loss_noise
 
                 self.discriminator.trainable = False
 
-                gen_loss = self.discriminator_generator.train_on_batch(noise, ones)
+                gen_loss = self.discriminator_generator.train_on_batch(noise, [1] * self.batch_size)
 
                 plot_dis_s = plot_dis_s * smooth_factor + dis_loss * (1 - smooth_factor)
                 plot_gen_s = plot_gen_s * smooth_factor + gen_loss * (1 - smooth_factor)
@@ -117,4 +120,4 @@ class DCGAN(object):
 
 
 if __name__ == '__main__':
-    pass
+    dcgan = DCGAN()
