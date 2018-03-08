@@ -154,3 +154,6 @@ def to_categorical(y, nb_classes=None):
     categorical = np.zeros((n, nb_classes))
     categorical[np.arange(n), y] = 1
     return categorical
+
+
+from keras.datasets import mnist
