@@ -1,7 +1,7 @@
 """
 Conditional Variational Recurrent Autoencoder in keras
 """
-
+from __future__ import print_function
 from keras import backend as K
 from keras.layers import Dense, Input, Lambda, LSTM, RepeatVector, TimeDistributed, Concatenate
 from keras.models import Model
@@ -12,7 +12,6 @@ class ConditionalVariationalRecurrentAutoencoder(object):
     def __init__(self, input_dim, window_length, num_classes, learning_rate=1e-4, batch_size=128, n_z=5):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
-        self.num_epochs = 100
 
         self.n_z = n_z
         self.input_dim = input_dim
@@ -72,8 +71,8 @@ class ConditionalVariationalRecurrentAutoencoder(object):
 
         return model, encoder, decoder
 
-    def train(self, x_train, y_train):
-        self.model.fit(x=[x_train, y_train], batch_size=self.batch_size, epochs=self.num_epochs, validation_split=0.2,
+    def train(self, x_train, y_train, epochs=100):
+        self.model.fit(x=[x_train, y_train], batch_size=self.batch_size, epochs=epochs, validation_split=0.2,
                        shuffle=True)
 
     def reconstructor(self, x, y):
@@ -84,3 +83,12 @@ class ConditionalVariationalRecurrentAutoencoder(object):
 
     def transformer(self, x, y):
         return self.encoder.predict([x, y])
+
+    def load_weights(self, path='./weights/cvrae.h5'):
+        try:
+            self.model.load_weights(path)
+        except:
+            print('Loading Conditional Recurrent VAE failed!')
+
+    def save_weights(self, path='./weights/cvrae.h5'):
+        self.model.save_weights(path)
