@@ -155,5 +155,11 @@ def to_categorical(y, nb_classes=None):
     categorical[np.arange(n), y] = 1
     return categorical
 
-
-from keras.datasets import mnist
+def get_mnist_32x32_1():
+    from keras.datasets import mnist
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train = np.pad(x_train, ((0, 0), (2, 2), (2, 2)), 'constant', constant_values=0)
+    x_test = np.pad(x_test, ((0, 0), (2, 2), (2, 2)), 'constant', constant_values=0)
+    x_train = np.expand_dims(x_train, axis=-1)
+    x_test = np.expand_dims(x_test, axis=-1)
+    return (x_train, y_train), (x_test, y_test)
