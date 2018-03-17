@@ -20,6 +20,8 @@ class RCGANMNIST(RCGAN):
         fake = Dense(1, activation='sigmoid', name='generation')(x)
         aux = Dense(self.num_classes, activation='softmax', name='auxiliary')(x)
         model = Model(inputs=time_series_input, outputs=[fake, aux])
+        model.compile(optimizer=Adam(lr=self.learning_rate, beta_1=0.5),
+                                   loss=['binary_crossentropy', 'sparse_categorical_crossentropy'])
         return model
 
     def _create_generator(self):
@@ -38,12 +40,10 @@ class RCGANMNIST(RCGAN):
         time_series_decode = decoder_4(decoder_3(repeat_z(decoder_1(h))))
 
         model = Model(inputs=[latent_input, image_class], outputs=time_series_decode)
+        model.compile(loss='binary_crossentropy', optimizer=Adam(self.learning_rate, beta_1=0.5))
         return model
 
     def _combine_generator_discriminator(self):
-        self.discriminator.compile(optimizer=Adam(lr=self.learning_rate, beta_1=0.5),
-                                   loss=['binary_crossentropy', 'sparse_categorical_crossentropy'])
-
         latent = Input(shape=(self.code_size,))
         image_class = Input(shape=(1,), dtype='int32')
         fake = self.generator([latent, image_class])
@@ -82,20 +82,21 @@ class RCGANMNIST(RCGAN):
                 # get noise
                 noise = np.random.normal(-1, 1, [self.batch_size, self.code_size])
                 # get sample labels
-                sampled_labels = np.random.randint(0, self.num_classes, self.batch_size).reshape(shape=(-1, 1))
+                sampled_labels = np.random.randint(0, self.num_classes, self.batch_size)
                 # get a batch of fake images
                 generated_images = self.generator.predict([noise, sampled_labels.reshape((-1, 1))], verbose=0)
                 x = np.concatenate((image_batch, generated_images))
                 soft_zero, soft_one = 0, 0.95
                 y = np.array([soft_one] * self.batch_size + [soft_zero] * self.batch_size)
                 aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
-                dis_loss = self.discriminator.train_on_batch(x, [y, aux_y], sample_weight=disc_sample_weight)
-
+                dis_loss = self.discriminator.train_on_batch(x, [y, aux_y], sample_weight=disc_sample_weight)[0]
+                # print(dis_loss)
                 noise = np.random.normal(-1, 1, (2 * self.batch_size, self.code_size))
                 sampled_labels = np.random.randint(0, self.num_classes, 2 * self.batch_size)
                 trick = np.ones(2 * self.batch_size) * soft_one
                 gen_loss = self.discriminator_generator.train_on_batch([noise, sampled_labels.reshape((-1, 1))],
-                                                                       [trick, sampled_labels])
+                                                                       [trick, sampled_labels])[0]
+                # print(gen_loss)
                 plot_dis_s = plot_dis_s * smooth_factor + dis_loss * (1 - smooth_factor)
                 plot_gen_s = plot_gen_s * smooth_factor + gen_loss * (1 - smooth_factor)
                 plot_ws = plot_ws * smooth_factor + (1 - smooth_factor)
@@ -108,3 +109,11 @@ class RCGANMNIST(RCGAN):
 
     def generate(self, codes, labels):
         return self.generator.predict([codes, labels])
+
+    def save_model(self, path='./weights/rcgan/'):
+        self.generator.save_weights(path + '/generator_mnist.h5')
+        self.discriminator.save_weights(path + '/discriminator_mnist.h5')
+
+    def load_model(self, path='./weights/rcgan/'):
+        self.generator.load_weights(path + '/generator_mnist.h5')
+        self.discriminator.load_weights(path + '/discriminator_mnist.h5')
