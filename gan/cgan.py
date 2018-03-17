@@ -167,7 +167,7 @@ class CGAN(object):
         return self.generator.predict([code, label], verbose=0)
 
     def generate(self, codes, labels):
-        generated = np.zeros((codes.shape[0], 32, 32, 3))
+        generated = np.zeros((codes.shape[0], 32, 32, self.num_channels))
         for i in range(codes.shape[0]):
             generated[i:i + 1] = self.generate_one_sample(codes[i:i + 1], labels[i:i + 1])
         return generated
