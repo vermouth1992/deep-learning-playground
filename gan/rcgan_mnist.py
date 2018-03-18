@@ -70,15 +70,20 @@ class RCGANMNIST(RCGAN):
         dis_losses = []
         gen_losses = []
 
+        index_array = np.arange(num_train)
+
         for epoch in range(num_epoch):
+            print('Epoch: {}'.format(epoch))
             disc_sample_weight = [np.ones(2 * self.batch_size),
                                   np.concatenate((np.ones(self.batch_size) * 2, np.zeros(self.batch_size)))]
+            np.random.shuffle(index_array)
             for i in range(num_train // self.batch_size):
+                current_index = index_array[i * self.batch_size: (i + 1) * self.batch_size]
                 step += 1
                 # get image
-                image_batch = train_samples[i * self.batch_size: (i + 1) * self.batch_size]
+                image_batch = train_samples[current_index]
                 # get label
-                label_batch = training_labels[i * self.batch_size: (i + 1) * self.batch_size]
+                label_batch = training_labels[current_index]
                 # get noise
                 noise = np.random.normal(-1, 1, [self.batch_size, self.code_size])
                 # get sample labels
