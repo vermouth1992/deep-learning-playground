@@ -1,6 +1,7 @@
 """
 PyTorch implementation of deep deterministic policy gradient
 """
+from __future__ import print_function, division
 
 import argparse
 import pprint as pp
@@ -18,11 +19,20 @@ from torch.nn.modules.loss import MSELoss
 from replay_buffer import ReplayBuffer
 
 
+losses_all = []
+
+def fanin_init(layer):
+    fanin = layer.weight.data.size()[0]
+    v = 1. / np.sqrt(fanin)
+    nn.init.uniform(layer.weight.data, -v, v)
+
 class ActorModule(nn.Module):
     def __init__(self, state_dim, action_dim, action_bound):
         super(ActorModule, self).__init__()
         self.fc1 = nn.Linear(state_dim, 400)
+        fanin_init(self.fc1)
         self.fc2 = nn.Linear(400, 300)
+        fanin_init(self.fc2)
         self.fc3 = nn.Linear(300, action_dim)
         torch.nn.init.uniform(self.fc3.weight.data, -3e-3, 3e-3)
         self.action_bound = action_bound
@@ -33,7 +43,7 @@ class ActorModule(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.fc3(x)
-        x = F.softmax(x, dim=1)
+        x = F.tanh(x)
         x = x * self.action_bound
         return x
 
@@ -54,19 +64,20 @@ class ActorNetwork(object):
         return ActorModule(self.s_dim, self.a_dim, self.action_bound)
 
     def train(self, inputs, a_gradient):
-        inputs = Variable(torch.FloatTensor(inputs))
-        a_gradient = Variable(torch.FloatTensor(a_gradient))
+        inputs = Variable(torch.from_numpy(inputs).float())
+        a_gradient = Variable(torch.from_numpy(a_gradient).float())
         self.optimizer.zero_grad()
+        self.actor_network.zero_grad()
         actions = self.actor_network(inputs)
-        actions.backward(a_gradient)
+        actions.backward(-a_gradient)
         self.optimizer.step()
 
     def predict(self, inputs):
-        inputs = Variable(torch.FloatTensor(inputs))
+        inputs = Variable(torch.from_numpy(inputs).float())
         return self.actor_network(inputs).data.numpy()
 
     def predict_target(self, inputs):
-        inputs = Variable(torch.FloatTensor(inputs))
+        inputs = Variable(torch.from_numpy(inputs).float())
         return self.target_actor_network(inputs).data.numpy()
 
     def update_target_network(self):
@@ -82,8 +93,11 @@ class CriticModule(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(CriticModule, self).__init__()
         self.fc1 = nn.Linear(state_dim, 256)
+        fanin_init(self.fc1)
         self.fc2 = nn.Linear(256, 256)
+        fanin_init(self.fc2)
         self.fc_action = nn.Linear(action_dim, 256)
+        fanin_init(self.fc_action)
         self.fc3 = nn.Linear(256, 1)
         torch.nn.init.uniform(self.fc3.weight.data, -3e-3, 3e-3)
 
@@ -115,32 +129,36 @@ class CriticNetwork(object):
         return CriticModule(self.state_dim, self.action_dim)
 
     def train(self, inputs, action, predicted_q_value):
-        inputs = Variable(torch.FloatTensor(inputs))
-        action = Variable(torch.FloatTensor(action))
-        predicted_q_value = Variable(torch.FloatTensor(predicted_q_value))
+        inputs = Variable(torch.from_numpy(inputs).float())
+        action = Variable(torch.from_numpy(action).float())
+        predicted_q_value = Variable(torch.from_numpy(predicted_q_value).float())
 
         self.optimizer.zero_grad()
+        self.critic_network.zero_grad()
         q_value = self.critic_network(inputs, action)
         output = self.loss(q_value, predicted_q_value)
+
+        losses_all.append(output.data.numpy())
+
         output.backward()
         self.optimizer.step()
         return q_value.data.numpy(), None
 
     def predict(self, inputs, action):
-        inputs = Variable(torch.FloatTensor(inputs))
-        action = Variable(torch.FloatTensor(action))
+        inputs = Variable(torch.from_numpy(inputs).float())
+        action = Variable(torch.from_numpy(action).float())
         return self.critic_network(inputs, action).data.numpy()
 
     def predict_target(self, inputs, action):
-        inputs = Variable(torch.FloatTensor(inputs))
-        action = Variable(torch.FloatTensor(action))
+        inputs = Variable(torch.from_numpy(inputs).float())
+        action = Variable(torch.from_numpy(action).float())
         return self.target_critic_network(inputs, action).data.numpy()
 
     def action_gradients(self, inputs, actions):
-        inputs = Variable(torch.FloatTensor(inputs))
-        actions = Variable(torch.FloatTensor(actions), requires_grad=True)
+        inputs = Variable(torch.from_numpy(inputs).float())
+        actions = Variable(torch.from_numpy(actions).float(), requires_grad=True)
         q_value = self.critic_network(inputs, actions)
-        q_value = torch.sum(q_value)
+        q_value = torch.mean(q_value)
         return torch.autograd.grad(q_value, actions)[0].data.numpy(), None
 
     def update_target_network(self):
@@ -200,9 +218,19 @@ def train(env, args, actor, critic, actor_noise):
 
             # Added exploration noise
             # a = actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
-            a = actor.predict(np.reshape(s, (1, actor.s_dim))) + actor_noise()
+            a = actor.predict(np.reshape(s, (1, actor.s_dim)))
 
-            s2, r, terminal, info = env.step(np.argmax(a[0]))
+            # print('Action: {}'.format(a))
+
+            a += actor_noise()
+
+            # print('Action after adding noise: {}'.format(a))
+            if a > 0:
+                action_taken = 1
+            else:
+                action_taken = 0
+
+            s2, r, terminal, info = env.step(action_taken)
 
             replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r,
                               terminal, np.reshape(s2, (actor.s_dim,)))
@@ -224,6 +252,7 @@ def train(env, args, actor, critic, actor_noise):
                     else:
                         y_i.append(r_batch[k] + critic.gamma * target_q[k])
 
+                y_i = np.array(y_i).astype(np.float)
                 # Update the critic given the targets
                 predicted_q_value, _ = critic.train(
                     s_batch, a_batch, np.reshape(y_i, (int(args['minibatch_size']), 1)))
@@ -244,7 +273,9 @@ def train(env, args, actor, critic, actor_noise):
 
             if terminal:
                 print('| Reward: {:d} | Episode: {:d} | Qmax: {:.4f}'.format(int(ep_reward),
-                                                                             i, (ep_ave_max_q / float(j))))
+                                                                             i, (ep_ave_max_q / float(j))), end=" | ")
+                if len(losses_all) > 0:
+                    print('Average output: {}'.format(np.mean(np.array(losses_all))))
                 break
 
 
@@ -255,7 +286,7 @@ def main(args):
     env.seed(int(args['random_seed']))
 
     state_dim = env.observation_space.shape[0]
-    action_dim = 2
+    action_dim = 1
     action_bound = 1
     # Ensure action bound is symmetric
     # assert (env.action_space.high == -env.action_space.low)
