@@ -12,19 +12,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
 from gym import wrappers
+from torch.autograd import Variable
 from torch.nn.modules.loss import MSELoss
 
 from replay_buffer import ReplayBuffer
-
+from prioritized_experience_replay import rank_based
 
 losses_all = []
+
 
 def fanin_init(layer):
     fanin = layer.weight.data.size()[0]
     v = 1. / np.sqrt(fanin)
     nn.init.uniform(layer.weight.data, -v, v)
+
 
 class ActorModule(nn.Module):
     def __init__(self, state_dim, action_dim, action_bound):
@@ -140,9 +142,11 @@ class CriticNetwork(object):
 
         losses_all.append(output.data.numpy())
 
+        delta = (predicted_q_value - q_value).data.numpy()
+
         output.backward()
         self.optimizer.step()
-        return q_value.data.numpy(), None
+        return q_value.data.numpy(), delta
 
     def predict(self, inputs, action):
         inputs = Variable(torch.from_numpy(inputs).float())
@@ -202,7 +206,13 @@ def train(env, args, actor, critic, actor_noise):
     critic.update_target_network()
 
     # Initialize replay memory
-    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
+    conf = {'size': args['buffer_size'],
+            'batch_size': int(args['minibatch_size']),
+            'learn_start': 1000
+            }
+    replay_buffer = rank_based.Experience(conf)
+    # replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
+    global_step = 0
 
     for i in range(int(args['max_episodes'])):
 
@@ -215,6 +225,8 @@ def train(env, args, actor, critic, actor_noise):
 
             if args['render_env']:
                 env.render()
+
+            global_step += 1
 
             # Added exploration noise
             # a = actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
@@ -233,17 +245,25 @@ def train(env, args, actor, critic, actor_noise):
             s2, r, terminal, info = env.step(action_taken)
 
             replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r,
-                              terminal, np.reshape(s2, (actor.s_dim,)))
+                              int(terminal), np.reshape(s2, (actor.s_dim,)))
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
-            if replay_buffer.size() > int(args['minibatch_size']):
-                s_batch, a_batch, r_batch, t_batch, s2_batch = \
-                    replay_buffer.sample_batch(int(args['minibatch_size']))
+            if replay_buffer.record_size > 1000:
+                # s_batch, a_batch, r_batch, t_batch, s2_batch = \
+                #     replay_buffer.sample_batch(64)
+                experience, w, rank_e_id = replay_buffer.sample_batch(global_step)
+                s_batch = np.array([_[0] for _ in experience])
+                a_batch = np.array([_[1] for _ in experience])
+                r_batch = np.array([_[2] for _ in experience])
+                t_batch = np.array([_[4] for _ in experience])
+                s2_batch = np.array([_[3] for _ in experience])
 
                 # Calculate targets
                 target_q = critic.predict_target(
                     s2_batch, actor.predict_target(s2_batch))
+
+                # print(s2_batch.shape, a_batch.shape, r_batch.shape, t_batch.shape, s2_batch.shape)
 
                 y_i = []
                 for k in range(int(args['minibatch_size'])):
@@ -254,7 +274,7 @@ def train(env, args, actor, critic, actor_noise):
 
                 y_i = np.array(y_i).astype(np.float)
                 # Update the critic given the targets
-                predicted_q_value, _ = critic.train(
+                predicted_q_value, delta = critic.train(
                     s_batch, a_batch, np.reshape(y_i, (int(args['minibatch_size']), 1)))
 
                 ep_ave_max_q += np.amax(predicted_q_value)
@@ -268,14 +288,21 @@ def train(env, args, actor, critic, actor_noise):
                 actor.update_target_network()
                 critic.update_target_network()
 
+                replay_buffer.update_priority(rank_e_id, delta + np.expand_dims(w, axis=1))
+
             s = s2
             ep_reward += r
 
             if terminal:
-                print('| Reward: {:d} | Episode: {:d} | Qmax: {:.4f}'.format(int(ep_reward),
-                                                                             i, (ep_ave_max_q / float(j))), end=" | ")
-                if len(losses_all) > 0:
-                    print('Average output: {}'.format(np.mean(np.array(losses_all))))
+                print('Global Step: {:d} | Reward: {:d} | Episode: {:d} | Qmax: {:.4f}'.format(global_step,
+                                                                                               int(ep_reward),
+                                                                                               i,
+                                                                                               (ep_ave_max_q / float(
+                        j))))
+                # if len(losses_all) > 0:
+                #     print('Average output: {}'.format(np.mean(np.array(losses_all))))
+
+                replay_buffer.rebalance()
                 break
 
 
@@ -323,7 +350,7 @@ if __name__ == '__main__':
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.99)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1000000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=10000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=64)
 
     # run parameters
