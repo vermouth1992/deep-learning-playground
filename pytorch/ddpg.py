@@ -210,8 +210,19 @@ def train(env, args, actor, critic, actor_noise):
             'batch_size': int(args['minibatch_size']),
             'learn_start': 1000
             }
-    replay_buffer = rank_based.Experience(conf)
-    # replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
+
+    if args['prioritized_buffer']:
+        use_prioritized_buffer = True
+        learn_start = conf['learn_start']
+        print('Using Prioritized Replay Buffer')
+    else:
+        use_prioritized_buffer = False
+        learn_start = int(args['minibatch_size'])
+
+    if use_prioritized_buffer:
+        replay_buffer = rank_based.Experience(conf)
+    else:
+        replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
     global_step = 0
 
     for i in range(int(args['max_episodes'])):
@@ -249,15 +260,17 @@ def train(env, args, actor, critic, actor_noise):
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
-            if replay_buffer.record_size > 1000:
-                # s_batch, a_batch, r_batch, t_batch, s2_batch = \
-                #     replay_buffer.sample_batch(64)
-                experience, w, rank_e_id = replay_buffer.sample_batch(global_step)
-                s_batch = np.array([_[0] for _ in experience])
-                a_batch = np.array([_[1] for _ in experience])
-                r_batch = np.array([_[2] for _ in experience])
-                t_batch = np.array([_[4] for _ in experience])
-                s2_batch = np.array([_[3] for _ in experience])
+            if replay_buffer.record_size > learn_start:
+                if not use_prioritized_buffer:
+                    s_batch, a_batch, r_batch, t_batch, s2_batch = \
+                        replay_buffer.sample_batch(int(args['minibatch_size']))
+                else:
+                    experience, w, rank_e_id = replay_buffer.sample_batch(global_step)
+                    s_batch = np.array([_[0] for _ in experience])
+                    a_batch = np.array([_[1] for _ in experience])
+                    r_batch = np.array([_[2] for _ in experience])
+                    t_batch = np.array([_[4] for _ in experience])
+                    s2_batch = np.array([_[3] for _ in experience])
 
                 # Calculate targets
                 target_q = critic.predict_target(
@@ -288,7 +301,8 @@ def train(env, args, actor, critic, actor_noise):
                 actor.update_target_network()
                 critic.update_target_network()
 
-                replay_buffer.update_priority(rank_e_id, delta + np.expand_dims(w, axis=1))
+                if use_prioritized_buffer:
+                    replay_buffer.update_priority(rank_e_id, delta + np.expand_dims(w, axis=1))
 
             s = s2
             ep_reward += r
@@ -301,8 +315,8 @@ def train(env, args, actor, critic, actor_noise):
                         j))))
                 # if len(losses_all) > 0:
                 #     print('Average output: {}'.format(np.mean(np.array(losses_all))))
-
-                replay_buffer.rebalance()
+                if use_prioritized_buffer:
+                    replay_buffer.rebalance()
                 break
 
 
@@ -362,9 +376,11 @@ if __name__ == '__main__':
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
     parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
+    parser.add_argument('--prioritized-buffer', help='use prioritized replay buffer', action='store_true')
 
     parser.set_defaults(render_env=False)
     parser.set_defaults(use_gym_monitor=True)
+    parser.set_defaults(prioritized_buffer=False)
 
     args = vars(parser.parse_args())
 
