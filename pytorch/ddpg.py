@@ -302,7 +302,7 @@ def train(env, args, actor, critic, actor_noise):
                 critic.update_target_network()
 
                 if use_prioritized_buffer:
-                    replay_buffer.update_priority(rank_e_id, delta + np.expand_dims(w, axis=1))
+                    replay_buffer.update_priority(rank_e_id, np.abs(delta))
 
             s = s2
             ep_reward += r
