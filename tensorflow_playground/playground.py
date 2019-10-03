@@ -9,7 +9,7 @@ test_ds = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(32)
 from tensorflow.keras.layers import Dense, Flatten
 
 
-class MyModel(Model):
+class MyModel(tf.keras.Model):
     def __init__(self):
         super(MyModel, self).__init__()
         self.flatten = Flatten()
@@ -42,7 +42,7 @@ test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
 @tf.function
 def train_step(images, labels):
     with tf.GradientTape() as tape:
-        predictions = model.call(images, training=True)
+        predictions = model(images, training=True)
         loss = loss_object(labels, predictions)
     gradients = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
@@ -53,7 +53,7 @@ def train_step(images, labels):
 
 @tf.function
 def test_step(images, labels):
-    predictions = model.call(images, training=False)
+    predictions = model(images, training=False)
     t_loss = loss_object(labels, predictions)
 
     test_loss(t_loss)
