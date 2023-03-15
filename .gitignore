@@ -1,3 +1,4 @@
+torch_compile_debug
 summary/
 results/
 *.h5
