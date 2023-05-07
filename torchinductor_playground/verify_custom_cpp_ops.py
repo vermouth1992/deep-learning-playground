@@ -8,15 +8,16 @@ print(torch.ops.my_ops.sigmoid_backward)
 
 
 class MySigmoid(torch.autograd.Function):
+    @staticmethod
     def forward(ctx, x):
         out = torch.ops.my_ops.sigmoid_forward(x)
         ctx.save_for_backward(out)
         return out
 
+    @staticmethod
     def backward(ctx, dout):
         out, = ctx.saved_tensors
         return torch.ops.my_ops.sigmoid_backward(out, dout)
-
 
 def my_sigmoid(x):
     return MySigmoid.apply(x)

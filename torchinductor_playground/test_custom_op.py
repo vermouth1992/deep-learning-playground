@@ -24,13 +24,16 @@ def pattern(x):
     return torch.sigmoid(x)
 
 
-def replacement(x):
-    return my_sigmoid(x)
+# def replacement(x):
+#     return my_sigmoid(x)
 
+
+replacement = torch.fx.symbolic_trace(my_sigmoid)
+replacement.graph.print_tabular()
 
 def replace_pattern_backend(gm: torch.fx.GraphModule, input):
     gm.graph.print_tabular()
-    # torch.fx.replace_pattern(gm, pattern=pattern, replacement=replacement)
+    torch.fx.replace_pattern(gm, pattern=pattern, replacement=replacement)
     gm.graph.print_tabular()
     return gm
 
@@ -129,4 +132,4 @@ print(input_tensor3.requires_grad)
 output = func_with_custom_triton_op_inductor__(input_tensor3)
 print(output)
 output.sum().backward()
-print(input_tensor2.grad)
+print(input_tensor3.grad)
