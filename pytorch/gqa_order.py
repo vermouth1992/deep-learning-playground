@@ -185,16 +185,15 @@ class MyLlamaAttention(nn.Module):
 
 def reorder_q(weight, num_attention_heads, num_key_value_heads):
     hidden_size = weight.shape[0]
-    weight = weight.view(hidden_size // num_attention_heads, num_attention_heads // num_key_value_heads, num_key_value_heads, hidden_size)
-    weight = weight.transpose(1, 2).contiguous()
+    weight = weight.view(num_key_value_heads, num_attention_heads // num_key_value_heads, hidden_size // num_attention_heads, hidden_size)
+    weight = weight.transpose(0, 1).contiguous()
     weight = weight.view(hidden_size, hidden_size).contiguous()
     return weight
 
 
 def reorder_o(weight, num_attention_heads, num_key_value_heads):
     hidden_size = weight.shape[0]
-    weight = weight.view(hidden_size, num_attention_heads // num_key_value_heads,
-                         num_key_value_heads, hidden_size // num_attention_heads)
+    weight = weight.view(hidden_size, num_key_value_heads, num_attention_heads // num_key_value_heads, hidden_size // num_attention_heads)
     weight = weight.transpose(1, 2).contiguous()
     weight = weight.view(hidden_size, hidden_size).contiguous()
     return weight
@@ -208,11 +207,11 @@ def order_state_dict(state_dict, num_attention_heads, num_key_value_heads):
 
 if __name__ == '__main__':
     config = LlamaConfig(vocab_size=16,
-                         hidden_size=4,
+                         hidden_size=256,
                          intermediate_size=8,
-                         num_hidden_layers=1,
-                         num_attention_heads=4,
-                         num_key_value_heads=2)
+                         num_hidden_layers=2,
+                         num_attention_heads=64,
+                         num_key_value_heads=4)
 
     torch.use_deterministic_algorithms(True)
 
@@ -222,8 +221,8 @@ if __name__ == '__main__':
     my_llama_attention.load_state_dict(order_state_dict(llama_attention.state_dict(), config.num_attention_heads,
                                                         config.num_key_value_heads))
 
-    batch_size = 1
-    seqlen = 1
+    batch_size = 4
+    seqlen = 16
 
     hidden_states = torch.randn(size=(batch_size, seqlen, config.hidden_size))
     attention_mask = torch.ones(size=(batch_size, seqlen), dtype=torch.int64)
