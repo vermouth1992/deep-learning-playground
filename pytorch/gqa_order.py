@@ -115,10 +115,6 @@ class MyLlamaAttention(nn.Module):
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
-        print('Start')
-        print(query_states)
-        print(key_states)
-
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
@@ -138,10 +134,6 @@ class MyLlamaAttention(nn.Module):
         else:
             key_states = repeat_kv(key_states, self.num_key_value_groups)
             value_states = repeat_kv(value_states, self.num_key_value_groups)
-
-        print('After repeat')
-        print(query_states)
-        print(key_states)
 
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
@@ -164,9 +156,6 @@ class MyLlamaAttention(nn.Module):
 
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
-        print('Before project')
-        print(attn_output)
-
         if self.config.pretraining_tp > 1:
             attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
             o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
@@ -177,31 +166,40 @@ class MyLlamaAttention(nn.Module):
         if not output_attentions:
             attn_weights = None
 
-        print('After project')
-        print(attn_output)
-
         return attn_output, attn_weights, past_key_value
 
 
-def reorder_q(weight, num_attention_heads, num_key_value_heads):
+def reorder_q(weight, num_attention_heads, num_key_value_heads, to_interleaved=True):
     hidden_size = weight.shape[0]
-    weight = weight.view(num_key_value_heads, num_attention_heads // num_key_value_heads, hidden_size // num_attention_heads, hidden_size)
+    if to_interleaved:
+        weight = weight.view(num_key_value_heads, num_attention_heads // num_key_value_heads,
+                             hidden_size // num_attention_heads, hidden_size)
+    else:
+        weight = weight.view(num_attention_heads // num_key_value_heads, num_key_value_heads,
+                             hidden_size // num_attention_heads, hidden_size)
     weight = weight.transpose(0, 1).contiguous()
     weight = weight.view(hidden_size, hidden_size).contiguous()
     return weight
 
 
-def reorder_o(weight, num_attention_heads, num_key_value_heads):
+def reorder_o(weight, num_attention_heads, num_key_value_heads, to_interleaved=True):
     hidden_size = weight.shape[0]
-    weight = weight.view(hidden_size, num_key_value_heads, num_attention_heads // num_key_value_heads, hidden_size // num_attention_heads)
+    if to_interleaved:
+        weight = weight.view(hidden_size, num_key_value_heads, num_attention_heads // num_key_value_heads,
+                             hidden_size // num_attention_heads)
+    else:
+        weight = weight.view(hidden_size, num_attention_heads // num_key_value_heads, num_key_value_heads,
+                             hidden_size // num_attention_heads)
     weight = weight.transpose(1, 2).contiguous()
     weight = weight.view(hidden_size, hidden_size).contiguous()
     return weight
 
 
-def order_state_dict(state_dict, num_attention_heads, num_key_value_heads):
-    state_dict['q_proj.weight'] = reorder_q(state_dict['q_proj.weight'], num_attention_heads, num_key_value_heads)
-    state_dict['o_proj.weight'] = reorder_o(state_dict['o_proj.weight'], num_attention_heads, num_key_value_heads)
+def order_state_dict(state_dict, num_attention_heads, num_key_value_heads, to_interleaved=True):
+    state_dict['q_proj.weight'] = reorder_q(state_dict['q_proj.weight'], num_attention_heads, num_key_value_heads,
+                                            to_interleaved)
+    state_dict['o_proj.weight'] = reorder_o(state_dict['o_proj.weight'], num_attention_heads, num_key_value_heads,
+                                            to_interleaved)
     return state_dict
 
 
@@ -218,8 +216,9 @@ if __name__ == '__main__':
     llama_attention = MyLlamaAttention(config=config, gqa_order=0)
     my_llama_attention = MyLlamaAttention(config=config, gqa_order=1)
 
+    # load from llama to my_llama
     my_llama_attention.load_state_dict(order_state_dict(llama_attention.state_dict(), config.num_attention_heads,
-                                                        config.num_key_value_heads))
+                                                        config.num_key_value_heads, to_interleaved=True))
 
     batch_size = 4
     seqlen = 16
@@ -231,6 +230,17 @@ if __name__ == '__main__':
     llama_output = llama_attention(hidden_states, None, position_ids)[0]
     my_llama_output = my_llama_attention(hidden_states, None, position_ids)[0]
 
-    print(torch.all(torch.eq(llama_output, my_llama_output)))
+    print(torch.max(torch.abs(llama_output - my_llama_output)))
+
+    torch.testing.assert_close(llama_output, my_llama_output)
+
+    # load from my_llama to llama
+    llama_attention.load_state_dict(order_state_dict(my_llama_attention.state_dict(), config.num_attention_heads,
+                                                     config.num_key_value_heads, to_interleaved=False))
+
+    llama_output = llama_attention(hidden_states, None, position_ids)[0]
+    my_llama_output = my_llama_attention(hidden_states, None, position_ids)[0]
 
     print(torch.max(torch.abs(llama_output - my_llama_output)))
+
+    torch.testing.assert_close(llama_output, my_llama_output)
